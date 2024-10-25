@@ -60,11 +60,13 @@ bool Toy_private_isEqual(Toy_Value left, Toy_Value right) {
 			return false;
 
 		case TOY_VALUE_ARRAY:
-		case TOY_VALUE_DICTIONARY:
+		case TOY_VALUE_TABLE:
 		case TOY_VALUE_FUNCTION:
 		case TOY_VALUE_OPAQUE:
-		default:
-		Toy_error(TOY_CC_ERROR "ERROR: Unknown types in value equality comparison\n" TOY_CC_RESET);
+		case TOY_VALUE_TYPE:
+		case TOY_VALUE_ANY:
+		case TOY_VALUE_UNKNOWN:
+			Toy_error(TOY_CC_ERROR "ERROR: Unknown types in value equality comparison\n" TOY_CC_RESET);
 	}
 
 	return 0;
@@ -96,12 +98,66 @@ unsigned int Toy_hashValue(Toy_Value value) {
 			return Toy_hashString(TOY_VALUE_AS_STRING(value));
 
 		case TOY_VALUE_ARRAY:
-		case TOY_VALUE_DICTIONARY:
+		case TOY_VALUE_TABLE:
 		case TOY_VALUE_FUNCTION:
 		case TOY_VALUE_OPAQUE:
-		default:
+		case TOY_VALUE_TYPE:
+		case TOY_VALUE_ANY:
+		case TOY_VALUE_UNKNOWN:
 			Toy_error(TOY_CC_ERROR "ERROR: Can't hash an unknown type\n" TOY_CC_RESET);
 	}
 
 	return 0;
+}
+
+Toy_Value Toy_copyValue(Toy_Value value) {
+	switch(value.type) {
+		case TOY_VALUE_NULL:
+		case TOY_VALUE_BOOLEAN:
+		case TOY_VALUE_INTEGER:
+		case TOY_VALUE_FLOAT:
+			return value;
+
+		case TOY_VALUE_STRING: {
+			Toy_String* string = TOY_VALUE_AS_STRING(value);
+			return TOY_VALUE_FROM_STRING(Toy_copyString(string));
+		}
+
+		case TOY_VALUE_ARRAY:
+		case TOY_VALUE_TABLE:
+		case TOY_VALUE_FUNCTION:
+		case TOY_VALUE_OPAQUE:
+		case TOY_VALUE_TYPE:
+		case TOY_VALUE_ANY:
+		case TOY_VALUE_UNKNOWN:
+			Toy_error(TOY_CC_ERROR "ERROR: Can't copy an unknown type\n" TOY_CC_RESET);
+	}
+
+	//dummy return
+	return TOY_VALUE_FROM_NULL();
+}
+
+void Toy_freeValue(Toy_Value value) {
+	switch(value.type) {
+		case TOY_VALUE_NULL:
+		case TOY_VALUE_BOOLEAN:
+		case TOY_VALUE_INTEGER:
+		case TOY_VALUE_FLOAT:
+			break;
+
+		case TOY_VALUE_STRING: {
+			Toy_String* string = TOY_VALUE_AS_STRING(value);
+			Toy_freeString(string);
+			break;
+		}
+
+		case TOY_VALUE_ARRAY:
+		case TOY_VALUE_TABLE:
+		case TOY_VALUE_FUNCTION:
+		case TOY_VALUE_OPAQUE:
+		case TOY_VALUE_TYPE:
+		case TOY_VALUE_ANY:
+		case TOY_VALUE_UNKNOWN:
+			Toy_error(TOY_CC_ERROR "ERROR: Can't free an unknown type\n" TOY_CC_RESET);
+	}
 }

@@ -122,7 +122,7 @@ int test_bytecode_from_source(Toy_Bucket** bucketHandle) {
 			*(int*)(offset + bc.ptr + 36) != 2 ||
 
 			*((unsigned char*)(offset + bc.ptr + 40)) != TOY_OPCODE_ADD ||
-			*((unsigned char*)(offset + bc.ptr + 41)) != 0 ||
+			*((unsigned char*)(offset + bc.ptr + 41)) != TOY_OPCODE_PASS ||
 			*((unsigned char*)(offset + bc.ptr + 42)) != 0 ||
 			*((unsigned char*)(offset + bc.ptr + 43)) != 0 ||
 
@@ -140,13 +140,13 @@ int test_bytecode_from_source(Toy_Bucket** bucketHandle) {
 			*(int*)(offset + bc.ptr + 56) != 4 ||
 
 			*((unsigned char*)(offset + bc.ptr + 60)) != TOY_OPCODE_ADD ||
-			*((unsigned char*)(offset + bc.ptr + 61)) != 0 ||
+			*((unsigned char*)(offset + bc.ptr + 61)) != TOY_OPCODE_PASS ||
 			*((unsigned char*)(offset + bc.ptr + 62)) != 0 ||
 			*((unsigned char*)(offset + bc.ptr + 63)) != 0 ||
 
 			//multiply the two values
 			*((unsigned char*)(offset + bc.ptr + 64)) != TOY_OPCODE_MULTIPLY ||
-			*((unsigned char*)(offset + bc.ptr + 65)) != 0 ||
+			*((unsigned char*)(offset + bc.ptr + 65)) != TOY_OPCODE_PASS ||
 			*((unsigned char*)(offset + bc.ptr + 66)) != 0 ||
 			*((unsigned char*)(offset + bc.ptr + 67)) != 0 ||
 

@@ -100,6 +100,100 @@ int test_simple_empty_parsers(Toy_Bucket** bucketHandle) {
 	return 0;
 }
 
+int test_var_declare(Toy_Bucket** bucketHandle) {
+	//declare with an initial value
+	{
+		const char* source = "var answer = 42;";
+		Toy_Ast* ast = makeAstFromSource(bucketHandle, source);
+
+		//check if it worked
+		if (
+			ast == NULL ||
+			ast->type != TOY_AST_BLOCK ||
+			ast->block.child == NULL ||
+			ast->block.child->type != TOY_AST_VAR_DECLARE ||
+
+			ast->block.child->varDeclare.name == NULL ||
+			ast->block.child->varDeclare.name->type != TOY_STRING_NAME ||
+			strcmp(ast->block.child->varDeclare.name->as.name.data, "answer") != 0 ||
+
+			ast->block.child->varDeclare.expr == NULL ||
+			ast->block.child->varDeclare.expr->type != TOY_AST_VALUE ||
+
+			TOY_VALUE_IS_INTEGER(ast->block.child->varDeclare.expr->value.value) == false ||
+			TOY_VALUE_AS_INTEGER(ast->block.child->varDeclare.expr->value.value) != 42)
+		{
+			fprintf(stderr, TOY_CC_ERROR "ERROR: Declare AST failed, source: %s\n" TOY_CC_RESET, source);
+			return -1;
+		}
+	}
+
+	//declare without an initial value
+	{
+		const char* source = "var empty;";
+		Toy_Ast* ast = makeAstFromSource(bucketHandle, source);
+
+		//check if it worked
+		if (
+			ast == NULL ||
+			ast->type != TOY_AST_BLOCK ||
+			ast->block.child == NULL ||
+			ast->block.child->type != TOY_AST_VAR_DECLARE ||
+
+			ast->block.child->varDeclare.name == NULL ||
+			ast->block.child->varDeclare.name->type != TOY_STRING_NAME ||
+			strcmp(ast->block.child->varDeclare.name->as.name.data, "empty") != 0 ||
+
+			ast->block.child->varDeclare.expr == NULL ||
+			ast->block.child->varDeclare.expr->type != TOY_AST_VALUE ||
+			TOY_VALUE_IS_NULL(ast->block.child->varDeclare.expr->value.value) == false ||
+
+			false)
+		{
+			fprintf(stderr, TOY_CC_ERROR "ERROR: Declare AST failed, source: %s\n" TOY_CC_RESET, source);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+int test_var_assign(Toy_Bucket** bucketHandle) {
+	//macro templates
+#define TEST_VAR_ASSIGN(ARG_SOURCE, ARG_FLAG, ARG_NAME, ARG_VALUE) \
+	{ \
+		const char* source = ARG_SOURCE; \
+		Toy_Ast* ast = makeAstFromSource(bucketHandle, source); \
+		if ( \
+			ast == NULL || \
+			ast->type != TOY_AST_BLOCK || \
+			ast->block.child == NULL || \
+			ast->block.child->type != TOY_AST_VAR_ASSIGN || \
+			ast->block.child->varAssign.flag != ARG_FLAG || \
+			ast->block.child->varAssign.name == NULL || \
+			ast->block.child->varAssign.name->type != TOY_STRING_NAME || \
+			strcmp(ast->block.child->varAssign.name->as.name.data, ARG_NAME) != 0 || \
+			ast->block.child->varAssign.expr == NULL || \
+			ast->block.child->varAssign.expr->type != TOY_AST_VALUE || \
+			TOY_VALUE_IS_INTEGER(ast->block.child->varAssign.expr->value.value) == false || \
+			TOY_VALUE_AS_INTEGER(ast->block.child->varAssign.expr->value.value) != ARG_VALUE) \
+		{ \
+			fprintf(stderr, TOY_CC_ERROR "ERROR: Assign AST failed, source: %s\n" TOY_CC_RESET, source); \
+			return -1; \
+		} \
+	}
+
+	//run tests
+	TEST_VAR_ASSIGN("answer = 42;", TOY_AST_FLAG_ASSIGN, "answer", 42);
+	TEST_VAR_ASSIGN("answer += 42;", TOY_AST_FLAG_ADD_ASSIGN, "answer", 42);
+	TEST_VAR_ASSIGN("answer -= 42;", TOY_AST_FLAG_SUBTRACT_ASSIGN, "answer", 42);
+	TEST_VAR_ASSIGN("answer *= 42;", TOY_AST_FLAG_MULTIPLY_ASSIGN, "answer", 42);
+	TEST_VAR_ASSIGN("answer /= 42;", TOY_AST_FLAG_DIVIDE_ASSIGN, "answer", 42);
+	TEST_VAR_ASSIGN("answer %= 42;", TOY_AST_FLAG_MODULO_ASSIGN, "answer", 42);
+
+	return 0;
+}
+
 int test_values(Toy_Bucket** bucketHandle) {
 	//test boolean true
 	{
@@ -358,60 +452,6 @@ int test_binary(Toy_Bucket** bucketHandle) {
 		}
 	}
 
-	//test binary assign (using numbers for now, as identifiers aren't coded yet)
-	{
-		Toy_Ast* ast = makeAstFromSource(bucketHandle, "1 = 2;");
-
-		//check if it worked
-		if (
-			ast == NULL ||
-			ast->type != TOY_AST_BLOCK ||
-			ast->block.child == NULL ||
-			ast->block.child->type != TOY_AST_BINARY ||
-			ast->block.child->binary.flag != TOY_AST_FLAG_ASSIGN ||
-
-			ast->block.child->binary.left == NULL ||
-			ast->block.child->binary.left->type != TOY_AST_VALUE ||
-			TOY_VALUE_IS_INTEGER(ast->block.child->binary.left->value.value) == false ||
-			TOY_VALUE_AS_INTEGER(ast->block.child->binary.left->value.value) != 1 ||
-
-			ast->block.child->binary.right == NULL ||
-			ast->block.child->binary.right->type != TOY_AST_VALUE ||
-			TOY_VALUE_IS_INTEGER(ast->block.child->binary.right->value.value) == false ||
-			TOY_VALUE_AS_INTEGER(ast->block.child->binary.right->value.value) != 2)
-		{
-			fprintf(stderr, TOY_CC_ERROR "ERROR: failed to run the parser with binary assign '1 = 2'\n" TOY_CC_RESET);
-			return -1;
-		}
-	}
-
-	//test binary compare (equality)
-	{
-		Toy_Ast* ast = makeAstFromSource(bucketHandle, "42 == 69;");
-
-		//check if it worked
-		if (
-			ast == NULL ||
-			ast->type != TOY_AST_BLOCK ||
-			ast->block.child == NULL ||
-			ast->block.child->type != TOY_AST_BINARY ||
-			ast->block.child->binary.flag != TOY_AST_FLAG_COMPARE_EQUAL ||
-
-			ast->block.child->binary.left == NULL ||
-			ast->block.child->binary.left->type != TOY_AST_VALUE ||
-			TOY_VALUE_IS_INTEGER(ast->block.child->binary.left->value.value) == false ||
-			TOY_VALUE_AS_INTEGER(ast->block.child->binary.left->value.value) != 42 ||
-
-			ast->block.child->binary.right == NULL ||
-			ast->block.child->binary.right->type != TOY_AST_VALUE ||
-			TOY_VALUE_IS_INTEGER(ast->block.child->binary.right->value.value) == false ||
-			TOY_VALUE_AS_INTEGER(ast->block.child->binary.right->value.value) != 69)
-		{
-			fprintf(stderr, TOY_CC_ERROR "ERROR: failed to run the parser with binary compare '42 == 69'\n" TOY_CC_RESET);
-			return -1;
-		}
-	}
-
 	return 0;
 }
 
@@ -574,15 +614,17 @@ int main() {
 		total += res;
 	}
 
-	// { //TODO: test_parser.c: test_var_declare()
-	// 	Toy_Bucket* bucket = Toy_allocateBucket(TOY_BUCKET_IDEAL);
-	// 	res = test_var_declare(&bucket);
-	// 	Toy_freeBucket(&bucket);
-	// 	if (res == 0) {
-	// 		printf(TOY_CC_NOTICE "All good\n" TOY_CC_RESET);
-	// 	}
-	// 	total += res;
-	// }
+	{
+		Toy_Bucket* bucket = Toy_allocateBucket(TOY_BUCKET_IDEAL);
+		res = test_var_declare(&bucket);
+		Toy_freeBucket(&bucket);
+		if (res == 0) {
+			printf(TOY_CC_NOTICE "All good\n" TOY_CC_RESET);
+		}
+		total += res;
+	}
+
+	//TODO: assign & compare?
 
 	{
 		Toy_Bucket* bucket = Toy_allocateBucket(TOY_BUCKET_IDEAL);

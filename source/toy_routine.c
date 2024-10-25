@@ -69,7 +69,7 @@ static void emitString(Toy_Routine** rt, Toy_String* str) {
 	unsigned int startAddr = (*rt)->dataCount;
 
 	//move the string into the data section
-	expand((void**)(&((*rt)->data)), &((*rt)->dataCapacity), &((*rt)->dataCount), (*rt)->dataCount + length);
+	expand((void**)(&((*rt)->data)), &((*rt)->dataCapacity), &((*rt)->dataCount), length);
 
 	if (str->type == TOY_STRING_NODE) {
 		char* buffer = Toy_getStringRawBuffer(str);
@@ -125,8 +125,8 @@ static void writeInstructionValue(Toy_Routine** rt, Toy_AstValue ast) {
 	}
 	else if (TOY_VALUE_IS_STRING(ast.value)) {
 		//4-byte alignment
-		EMIT_BYTE(rt, code, 0);
-		EMIT_BYTE(rt, code, 0);
+		EMIT_BYTE(rt, code, TOY_STRING_LEAF); //normal string
+		EMIT_BYTE(rt, code, 0); //can't store the length
 
 		emitString(rt, TOY_VALUE_AS_STRING(ast.value));
 	}
@@ -175,42 +175,153 @@ static void writeInstructionBinary(Toy_Routine** rt, Toy_AstBinary ast) {
 		EMIT_BYTE(rt, code,TOY_OPCODE_MODULO);
 	}
 
-	// else if (ast.flag == TOY_AST_FLAG_ASSIGN) {
-	// 	EMIT_BYTE(rt, code,TOY_OPCODE_ASSIGN);
-	// 	//TODO: emit the env symbol to store TOP(S) within
-	// }
-	// else if (ast.flag == TOY_AST_FLAG_ADD_ASSIGN) {
-	// 	EMIT_BYTE(rt, code,TOY_OPCODE_ADD);
-	// 	EMIT_BYTE(rt, code,TOY_OPCODE_ASSIGN);
-	// 	//TODO: emit the env symbol to store TOP(S) within
-	// }
-	// else if (ast.flag == TOY_AST_FLAG_SUBTRACT_ASSIGN) {
-	// 	EMIT_BYTE(rt, code,TOY_OPCODE_SUBTRACT);
-	// 	EMIT_BYTE(rt, code,TOY_OPCODE_ASSIGN);
-	// 	//TODO: emit the env symbol to store TOP(S) within
-	// }
-	// else if (ast.flag == TOY_AST_FLAG_MULTIPLY_ASSIGN) {
-	// 	EMIT_BYTE(rt, code,TOY_OPCODE_MULTIPLY);
-	// 	EMIT_BYTE(rt, code,TOY_OPCODE_ASSIGN);
-	// 	//TODO: emit the env symbol to store TOP(S) within
-	// }
-	// else if (ast.flag == TOY_AST_FLAG_DIVIDE_ASSIGN) {
-	// 	EMIT_BYTE(rt, code,TOY_OPCODE_DIVIDE);
-	// 	EMIT_BYTE(rt, code,TOY_OPCODE_ASSIGN);
-	// 	//TODO: emit the env symbol to store TOP(S) within
-	// }
-	// else if (ast.flag == TOY_AST_FLAG_MODULO_ASSIGN) {
-	// 	EMIT_BYTE(rt, code,TOY_OPCODE_MODULO);
-	// 	EMIT_BYTE(rt, code,TOY_OPCODE_ASSIGN);
-	// 	//TODO: emit the env symbol to store TOP(S) within
-	// }
+	//nowhere to really put these for now
+	else if (ast.flag == TOY_AST_FLAG_AND) {
+		EMIT_BYTE(rt, code,TOY_OPCODE_AND);
+	}
+	else if (ast.flag == TOY_AST_FLAG_OR) {
+		EMIT_BYTE(rt, code,TOY_OPCODE_OR);
+	}
+	else if (ast.flag == TOY_AST_FLAG_CONCAT) {
+		EMIT_BYTE(rt, code, TOY_OPCODE_CONCAT);
+	}
+	else {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Invalid AST binary flag found\n" TOY_CC_RESET);
+		exit(-1);
+	}
 
-	else if (ast.flag == TOY_AST_FLAG_COMPARE_EQUAL) {
+	//4-byte alignment
+	EMIT_BYTE(rt, code,TOY_OPCODE_PASS); //checked in compound assignments
+	EMIT_BYTE(rt, code,0);
+	EMIT_BYTE(rt, code,0);
+}
+
+static void writeInstructionAssign(Toy_Routine** rt, Toy_AstVarAssign ast) {
+	//name, duplicate, right, opcode
+	if (ast.flag == TOY_AST_FLAG_ASSIGN) {
+		EMIT_BYTE(rt, code, TOY_OPCODE_READ);
+		EMIT_BYTE(rt, code, TOY_VALUE_STRING);
+		EMIT_BYTE(rt, code, TOY_STRING_NAME);
+		EMIT_BYTE(rt, code, ast.name->length); //store the length (max 255)
+
+		emitString(rt, ast.name);
+		writeRoutineCode(rt, ast.expr);
+
+		EMIT_BYTE(rt, code, TOY_OPCODE_ASSIGN);
+		EMIT_BYTE(rt, code, 0);
+	}
+	else if (ast.flag == TOY_AST_FLAG_ADD_ASSIGN) {
+		EMIT_BYTE(rt, code, TOY_OPCODE_READ);
+		EMIT_BYTE(rt, code, TOY_VALUE_STRING);
+		EMIT_BYTE(rt, code, TOY_STRING_NAME);
+		EMIT_BYTE(rt, code, ast.name->length); //store the length (max 255)
+
+		emitString(rt, ast.name);
+
+		EMIT_BYTE(rt, code,TOY_OPCODE_DUPLICATE);
+		EMIT_BYTE(rt, code,0);
+		EMIT_BYTE(rt, code,0);
+		EMIT_BYTE(rt, code,0);
+
+		writeRoutineCode(rt, ast.expr);
+
+		EMIT_BYTE(rt, code,TOY_OPCODE_ADD);
+		EMIT_BYTE(rt, code,TOY_OPCODE_ASSIGN); //squeezed
+	}
+	else if (ast.flag == TOY_AST_FLAG_SUBTRACT_ASSIGN) {
+		EMIT_BYTE(rt, code, TOY_OPCODE_READ);
+		EMIT_BYTE(rt, code, TOY_VALUE_STRING);
+		EMIT_BYTE(rt, code, TOY_STRING_NAME);
+		EMIT_BYTE(rt, code, ast.name->length); //store the length (max 255)
+
+		emitString(rt, ast.name);
+
+		EMIT_BYTE(rt, code,TOY_OPCODE_DUPLICATE);
+		EMIT_BYTE(rt, code,0);
+		EMIT_BYTE(rt, code,0);
+		EMIT_BYTE(rt, code,0);
+
+		writeRoutineCode(rt, ast.expr);
+
+		EMIT_BYTE(rt, code,TOY_OPCODE_SUBTRACT);
+		EMIT_BYTE(rt, code,TOY_OPCODE_ASSIGN); //squeezed
+	}
+	else if (ast.flag == TOY_AST_FLAG_MULTIPLY_ASSIGN) {
+		EMIT_BYTE(rt, code, TOY_OPCODE_READ);
+		EMIT_BYTE(rt, code, TOY_VALUE_STRING);
+		EMIT_BYTE(rt, code, TOY_STRING_NAME);
+		EMIT_BYTE(rt, code, ast.name->length); //store the length (max 255)
+
+		emitString(rt, ast.name);
+
+		EMIT_BYTE(rt, code,TOY_OPCODE_DUPLICATE);
+		EMIT_BYTE(rt, code,0);
+		EMIT_BYTE(rt, code,0);
+		EMIT_BYTE(rt, code,0);
+
+		writeRoutineCode(rt, ast.expr);
+
+		EMIT_BYTE(rt, code,TOY_OPCODE_MULTIPLY);
+		EMIT_BYTE(rt, code,TOY_OPCODE_ASSIGN); //squeezed
+	}
+	else if (ast.flag == TOY_AST_FLAG_DIVIDE_ASSIGN) {
+		EMIT_BYTE(rt, code, TOY_OPCODE_READ);
+		EMIT_BYTE(rt, code, TOY_VALUE_STRING);
+		EMIT_BYTE(rt, code, TOY_STRING_NAME);
+		EMIT_BYTE(rt, code, ast.name->length); //store the length (max 255)
+
+		emitString(rt, ast.name);
+
+		EMIT_BYTE(rt, code,TOY_OPCODE_DUPLICATE);
+		EMIT_BYTE(rt, code,0);
+		EMIT_BYTE(rt, code,0);
+		EMIT_BYTE(rt, code,0);
+
+		writeRoutineCode(rt, ast.expr);
+
+		EMIT_BYTE(rt, code,TOY_OPCODE_DIVIDE);
+		EMIT_BYTE(rt, code,TOY_OPCODE_ASSIGN); //squeezed
+	}
+	else if (ast.flag == TOY_AST_FLAG_MODULO_ASSIGN) {
+		EMIT_BYTE(rt, code, TOY_OPCODE_READ);
+		EMIT_BYTE(rt, code, TOY_VALUE_STRING);
+		EMIT_BYTE(rt, code, TOY_STRING_NAME);
+		EMIT_BYTE(rt, code, ast.name->length); //store the length (max 255)
+
+		emitString(rt, ast.name);
+
+		EMIT_BYTE(rt, code,TOY_OPCODE_DUPLICATE);
+		EMIT_BYTE(rt, code,0);
+		EMIT_BYTE(rt, code,0);
+		EMIT_BYTE(rt, code,0);
+
+		writeRoutineCode(rt, ast.expr);
+
+		EMIT_BYTE(rt, code,TOY_OPCODE_MODULO);
+		EMIT_BYTE(rt, code,TOY_OPCODE_ASSIGN); //squeezed
+	}
+
+	else {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Invalid AST assign flag found\n" TOY_CC_RESET);
+		exit(-1);
+	}
+
+	//4-byte alignment
+	EMIT_BYTE(rt, code,0);
+	EMIT_BYTE(rt, code,0);
+}
+
+static void writeInstructionCompare(Toy_Routine** rt, Toy_AstCompare ast) {
+	//left, then right, then the compare's operation
+	writeRoutineCode(rt, ast.left);
+	writeRoutineCode(rt, ast.right);
+
+	if (ast.flag == TOY_AST_FLAG_COMPARE_EQUAL) {
 		EMIT_BYTE(rt, code,TOY_OPCODE_COMPARE_EQUAL);
 	}
 	else if (ast.flag == TOY_AST_FLAG_COMPARE_NOT) {
 		EMIT_BYTE(rt, code,TOY_OPCODE_COMPARE_EQUAL);
-		EMIT_BYTE(rt, code,TOY_OPCODE_NEGATE); //squeezed into one word
+		EMIT_BYTE(rt, code,TOY_OPCODE_NEGATE); //squeezed
 		EMIT_BYTE(rt, code,0);
 		EMIT_BYTE(rt, code,0);
 
@@ -229,17 +340,8 @@ static void writeInstructionBinary(Toy_Routine** rt, Toy_AstBinary ast) {
 		EMIT_BYTE(rt, code,TOY_OPCODE_COMPARE_GREATER_EQUAL);
 	}
 
-	else if (ast.flag == TOY_AST_FLAG_AND) {
-		EMIT_BYTE(rt, code,TOY_OPCODE_AND);
-	}
-	else if (ast.flag == TOY_AST_FLAG_OR) {
-		EMIT_BYTE(rt, code,TOY_OPCODE_OR);
-	}
-	else if (ast.flag == TOY_AST_FLAG_CONCAT) {
-		EMIT_BYTE(rt, code, TOY_OPCODE_CONCAT);
-	}
 	else {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Invalid AST binary flag found\n" TOY_CC_RESET);
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Invalid AST compare flag found\n" TOY_CC_RESET);
 		exit(-1);
 	}
 
@@ -306,6 +408,14 @@ static void writeRoutineCode(Toy_Routine** rt, Toy_Ast* ast) {
 
 		case TOY_AST_BINARY:
 			writeInstructionBinary(rt, ast->binary);
+			break;
+
+		case TOY_AST_VAR_ASSIGN:
+			writeInstructionAssign(rt, ast->varAssign);
+			break;
+
+		case TOY_AST_COMPARE:
+			writeInstructionCompare(rt, ast->compare);
 			break;
 
 		case TOY_AST_GROUP:

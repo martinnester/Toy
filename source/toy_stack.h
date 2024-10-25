@@ -6,7 +6,7 @@
 typedef struct Toy_Stack { //32 | 64 BITNESS
 	unsigned int capacity; //4  | 4
 	unsigned int count;    //4  | 4
-	char data[];           //-  | -
+	Toy_Value data[];      //-  | -
 } Toy_Stack;               //8  | 8
 
 TOY_API Toy_Stack* Toy_allocateStack();

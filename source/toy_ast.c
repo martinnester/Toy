@@ -63,6 +63,17 @@ void Toy_private_emitAstBinary(Toy_Bucket** bucketHandle, Toy_Ast** astHandle, T
 	(*astHandle) = tmp;
 }
 
+void Toy_private_emitAstCompare(Toy_Bucket** bucketHandle, Toy_Ast** astHandle, Toy_AstFlag flag, Toy_Ast* right) {
+	Toy_Ast* tmp = (Toy_Ast*)Toy_partitionBucket(bucketHandle, sizeof(Toy_Ast));
+
+	tmp->type = TOY_AST_COMPARE;
+	tmp->compare.flag = flag;
+	tmp->compare.left = *astHandle; //left-recursive
+	tmp->compare.right = right;
+
+	(*astHandle) = tmp;
+}
+
 void Toy_private_emitAstGroup(Toy_Bucket** bucketHandle, Toy_Ast** astHandle) {
 	Toy_Ast* tmp = (Toy_Ast*)Toy_partitionBucket(bucketHandle, sizeof(Toy_Ast));
 
@@ -87,6 +98,17 @@ void Toy_private_emitAstVariableDeclaration(Toy_Bucket** bucketHandle, Toy_Ast**
 	tmp->type = TOY_AST_VAR_DECLARE;
 	tmp->varDeclare.name = name;
 	tmp->varDeclare.expr = expr;
+
+	(*astHandle) = tmp;
+}
+
+void Toy_private_emitAstVariableAssignment(Toy_Bucket** bucketHandle, Toy_Ast** astHandle, Toy_String* name, Toy_AstFlag flag, Toy_Ast* expr) {
+	Toy_Ast* tmp = (Toy_Ast*)Toy_partitionBucket(bucketHandle, sizeof(Toy_Ast));
+
+	tmp->type = TOY_AST_VAR_ASSIGN;
+	tmp->varAssign.flag = flag;
+	tmp->varAssign.name = name;
+	tmp->varAssign.expr = expr;
 
 	(*astHandle) = tmp;
 }

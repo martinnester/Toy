@@ -110,6 +110,7 @@ typedef struct ParsingTuple {
 
 static void parsePrecedence(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle, ParsingPrecedence precRule);
 
+static Toy_AstFlag nameString(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle);
 static Toy_AstFlag literal(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle);
 static Toy_AstFlag unary(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle);
 static Toy_AstFlag binary(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle);
@@ -119,8 +120,8 @@ static Toy_AstFlag group(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast*
 static ParsingTuple parsingRulesetTable[] = {
 	{PREC_PRIMARY,literal,NULL},// TOY_TOKEN_NULL,
 
-	//variable names
-	{PREC_NONE,NULL,NULL},// TOY_TOKEN_NAME,
+	//variable names (initially handled as a string)
+	{PREC_NONE,nameString,NULL},// TOY_TOKEN_NAME,
 
 	//types
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_TYPE_TYPE,
@@ -220,6 +221,44 @@ static ParsingTuple parsingRulesetTable[] = {
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_ERROR,
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_EOF,
 };
+
+static Toy_AstFlag nameString(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle) {
+	Toy_String* name = Toy_createNameStringLength(bucketHandle, parser->previous.lexeme, parser->previous.length, TOY_VALUE_UNKNOWN);
+
+	Toy_AstFlag flag = TOY_AST_FLAG_NONE;
+
+	if (match(parser, TOY_TOKEN_OPERATOR_ASSIGN)) {
+		flag = TOY_AST_FLAG_ASSIGN;
+	}
+	else if (match(parser, TOY_TOKEN_OPERATOR_ADD_ASSIGN)) {
+		flag = TOY_AST_FLAG_ADD_ASSIGN;
+	}
+	else if (match(parser, TOY_TOKEN_OPERATOR_SUBTRACT_ASSIGN)) {
+		flag = TOY_AST_FLAG_SUBTRACT_ASSIGN;
+	}
+	else if (match(parser, TOY_TOKEN_OPERATOR_MULTIPLY_ASSIGN)) {
+		flag = TOY_AST_FLAG_MULTIPLY_ASSIGN;
+	}
+	else if (match(parser, TOY_TOKEN_OPERATOR_DIVIDE_ASSIGN)) {
+		flag = TOY_AST_FLAG_DIVIDE_ASSIGN;
+	}
+	else if (match(parser, TOY_TOKEN_OPERATOR_MODULO_ASSIGN)) {
+		flag = TOY_AST_FLAG_MODULO_ASSIGN;
+	}
+
+	//assignment
+	if (flag != TOY_AST_FLAG_NONE) {
+		Toy_Ast* expr = NULL;
+		parsePrecedence(bucketHandle, parser, &expr, PREC_ASSIGNMENT); //this makes chained assignment possible, I think
+		Toy_private_emitAstVariableAssignment(bucketHandle, rootHandle, name, flag, expr);
+		return TOY_AST_FLAG_NONE;
+	}
+
+	//access
+	printError(parser, parser->previous, "Unexpectedly found a variable access; this is not yet implemented");
+	Toy_private_emitAstError(bucketHandle, rootHandle);
+	return TOY_AST_FLAG_NONE;
+}
 
 static Toy_AstFlag literal(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle) {
 	switch(parser->previous.type) {
@@ -494,6 +533,9 @@ static void parsePrecedence(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_A
 			return;
 		}
 
+		//grab this for name storage
+		Toy_Token prevToken = parser->previous;
+
 		Toy_Ast* ptr = NULL;
 		Toy_AstFlag flag = infix(bucketHandle, parser, &ptr);
 
@@ -502,8 +544,16 @@ static void parsePrecedence(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_A
 			(*rootHandle) = ptr;
 			return;
 		}
-
-		Toy_private_emitAstBinary(bucketHandle, rootHandle, flag, ptr);
+		else if (flag >= 10 && flag <= 19) {
+			Toy_String* name = Toy_createNameStringLength(bucketHandle, prevToken.lexeme, prevToken.length, TOY_VALUE_UNKNOWN);
+			Toy_private_emitAstVariableAssignment(bucketHandle, rootHandle, name, flag, ptr);
+		}
+		else if (flag >= 20 && flag <= 29) {
+			Toy_private_emitAstCompare(bucketHandle, rootHandle, flag, ptr);
+		}
+		else {
+			Toy_private_emitAstBinary(bucketHandle, rootHandle, flag, ptr);
+		}
 	}
 
 	//can't assign below a certain precedence
@@ -531,8 +581,8 @@ static void makeExprStmt(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast*
 static void makeVariableDeclarationStmt(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle) {
 	consume(parser, TOY_TOKEN_NAME, "Expected variable name after 'var' keyword");
 
-	if (parser->previous.length > 256) {
-		printError(parser, parser->previous, "Can't have a variable name longer than 256 characters");
+	if (parser->previous.length > 255) {
+		printError(parser, parser->previous, "Can't have a variable name longer than 255 characters");
 		Toy_private_emitAstError(bucketHandle, rootHandle);
 		return;
 	}

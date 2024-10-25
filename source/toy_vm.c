@@ -64,15 +64,27 @@ static void processRead(Toy_VM* vm) {
 		}
 
 		case TOY_VALUE_STRING: {
-			fixAlignment(vm);
+			enum Toy_StringType stringType = READ_BYTE(vm);
+			int len = (int)READ_BYTE(vm);
+
 			//grab the jump as an integer
-			unsigned int jump = *(unsigned int*)(vm->routine + vm->jumpsAddr + READ_INT(vm));
+			unsigned int jump = vm->routine[ vm->jumpsAddr + READ_INT(vm) ];
 
 			//jumps are relative to the data address
 			char* cstring = (char*)(vm->routine + vm->dataAddr + jump);
 
 			//build a string from the data section
-			value = TOY_VALUE_FROM_STRING(Toy_createString(&vm->stringBucket, cstring));
+			if (stringType == TOY_STRING_LEAF) {
+				value = TOY_VALUE_FROM_STRING(Toy_createString(&vm->stringBucket, cstring));
+			}
+			else if (stringType == TOY_STRING_NAME) {
+				Toy_ValueType valueType = TOY_VALUE_UNKNOWN;
+
+				value = TOY_VALUE_FROM_STRING(Toy_createNameStringLength(&vm->stringBucket, cstring, len, valueType));
+			}
+			else {
+				Toy_error("Invalid string type found");
+			}
 
 			break;
 		}
@@ -82,7 +94,7 @@ static void processRead(Toy_VM* vm) {
 			// break;
 		}
 
-		case TOY_VALUE_DICTIONARY: {
+		case TOY_VALUE_TABLE: {
 			//
 			// break;
 		}
@@ -93,6 +105,21 @@ static void processRead(Toy_VM* vm) {
 		}
 
 		case TOY_VALUE_OPAQUE: {
+			//
+			// break;
+		}
+
+		case TOY_VALUE_TYPE: {
+			//
+			// break;
+		}
+
+		case TOY_VALUE_ANY: {
+			//
+			// break;
+		}
+
+		case TOY_VALUE_UNKNOWN: {
 			//
 			// break;
 		}
@@ -131,6 +158,24 @@ static void processDeclare(Toy_VM* vm) {
 
 	//cleanup
 	Toy_freeString(name);
+}
+
+static void processAssign(Toy_VM* vm) {
+	//get the value & name
+	Toy_Value value = Toy_popStack(&vm->stack);
+	Toy_Value name = Toy_popStack(&vm->stack);
+
+	//check string type
+	if (!TOY_VALUE_IS_STRING(name) && TOY_VALUE_AS_STRING(name)->type != TOY_STRING_NAME) {
+		Toy_error("Invalid assignment target");
+		return;
+	}
+
+	//assign it
+	Toy_assignScope(vm->scope, TOY_VALUE_AS_STRING(name), value);
+
+	//cleanup
+	Toy_freeValue(name);
 }
 
 static void processArithmetic(Toy_VM* vm, Toy_OpcodeType opcode) {
@@ -191,6 +236,18 @@ static void processArithmetic(Toy_VM* vm, Toy_OpcodeType opcode) {
 
 	//finally
 	Toy_pushStack(&vm->stack, result);
+
+	//check for compound assignments
+	Toy_OpcodeType squeezed = READ_BYTE(vm);
+	if (squeezed == TOY_OPCODE_ASSIGN) {
+		processAssign(vm);
+	}
+}
+
+static void processDuplicate(Toy_VM* vm) {
+	Toy_Value value = Toy_copyValue(Toy_peekStack(&vm->stack));
+	Toy_pushStack(&vm->stack, value);
+	Toy_freeValue(value);
 }
 
 static void processComparison(Toy_VM* vm, Toy_OpcodeType opcode) {
@@ -316,9 +373,12 @@ static void processPrint(Toy_VM* vm) {
 		}
 
 		case TOY_VALUE_ARRAY:
-		case TOY_VALUE_DICTIONARY:
+		case TOY_VALUE_TABLE:
 		case TOY_VALUE_FUNCTION:
 		case TOY_VALUE_OPAQUE:
+		case TOY_VALUE_TYPE:
+		case TOY_VALUE_ANY:
+		case TOY_VALUE_UNKNOWN:
 			fprintf(stderr, TOY_CC_ERROR "ERROR: Unknown value type %d passed to processPrint, exiting\n" TOY_CC_RESET, value.type);
 			exit(-1);
 	}
@@ -355,6 +415,14 @@ static void process(Toy_VM* vm) {
 
 			case TOY_OPCODE_DECLARE:
 				processDeclare(vm);
+				break;
+
+			case TOY_OPCODE_ASSIGN:
+				processAssign(vm);
+				break;
+
+			case TOY_OPCODE_DUPLICATE:
+				processDuplicate(vm);
 				break;
 
 			//arithmetic instructions
@@ -398,7 +466,6 @@ static void process(Toy_VM* vm) {
 				break;
 
 			//not yet implemented
-			case TOY_OPCODE_ASSIGN:
 			case TOY_OPCODE_ACCESS:
 				fprintf(stderr, TOY_CC_ERROR "ERROR: Incomplete opcode %d found, exiting\n" TOY_CC_RESET, opcode);
 				exit(-1);
@@ -486,7 +553,10 @@ void Toy_bindVMToRoutine(Toy_VM* vm, unsigned char* routine) {
 	vm->stringBucket = Toy_allocateBucket(TOY_BUCKET_IDEAL);
 	vm->scopeBucket = Toy_allocateBucket(TOY_BUCKET_SMALL);
 	vm->stack = Toy_allocateStack();
-	vm->scope = Toy_pushScope(&vm->scopeBucket, NULL);
+	if (vm->scope == NULL) {
+		//only allocate a new top-level scope when needed, otherwise REPL will break
+		vm->scope = Toy_pushScope(&vm->scopeBucket, NULL);
+	}
 }
 
 void Toy_runVM(Toy_VM* vm) {

@@ -7,6 +7,8 @@ typedef enum Toy_OpcodeType {
 	TOY_OPCODE_ASSIGN,
 	TOY_OPCODE_ACCESS,
 
+	TOY_OPCODE_DUPLICATE, //duplicate the top of the stack
+
 	//arithmetic instructions
 	TOY_OPCODE_ADD,
 	TOY_OPCODE_SUBTRACT,

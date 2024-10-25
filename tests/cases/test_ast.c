@@ -21,6 +21,8 @@ int test_sizeof_ast_64bit() {
 	TEST_SIZEOF(Toy_AstValue, 24);
 	TEST_SIZEOF(Toy_AstUnary, 16);
 	TEST_SIZEOF(Toy_AstBinary, 24);
+	TEST_SIZEOF(Toy_AstVarAssign, 24);
+	TEST_SIZEOF(Toy_AstCompare, 24);
 	TEST_SIZEOF(Toy_AstGroup, 16);
 	TEST_SIZEOF(Toy_AstPrint, 16);
 	TEST_SIZEOF(Toy_AstPass, 4);
@@ -50,6 +52,8 @@ int test_sizeof_ast_32bit() {
 	TEST_SIZEOF(Toy_AstValue, 12);
 	TEST_SIZEOF(Toy_AstUnary, 12);
 	TEST_SIZEOF(Toy_AstBinary, 16);
+	TEST_SIZEOF(Toy_AstVarAssign, 16);
+	TEST_SIZEOF(Toy_AstCompare, 16);
 	TEST_SIZEOF(Toy_AstGroup, 8);
 	TEST_SIZEOF(Toy_AstPrint, 8);
 	TEST_SIZEOF(Toy_AstPass, 4);
@@ -120,6 +124,56 @@ int test_type_emission(Toy_Bucket** bucketHandle) {
 			TOY_VALUE_AS_INTEGER(ast->binary.right->value.value) != 69)
 		{
 			fprintf(stderr, TOY_CC_ERROR "ERROR: failed to emit a binary as 'Toy_Ast', state unknown\n" TOY_CC_RESET);
+			return -1;
+		}
+	}
+
+	//emit assign
+	{
+		//build the AST
+		Toy_Ast* ast = NULL;
+		Toy_Ast* right = NULL;
+		Toy_String* name = Toy_createNameStringLength(bucketHandle, "foobar", 6, TOY_VALUE_INTEGER);
+		Toy_private_emitAstValue(bucketHandle, &right, TOY_VALUE_FROM_INTEGER(69));
+		Toy_private_emitAstVariableAssignment(bucketHandle, &ast, name, TOY_AST_FLAG_ASSIGN, right);
+
+		//check if it worked
+		if (
+			ast == NULL ||
+			ast->type != TOY_AST_VAR_ASSIGN ||
+			ast->varAssign.flag != TOY_AST_FLAG_ASSIGN ||
+			ast->varAssign.name == NULL ||
+			ast->varAssign.name->type != TOY_STRING_NAME ||
+			strcmp(ast->varAssign.name->as.name.data, "foobar") != 0 ||
+			ast->varAssign.name->as.name.type != TOY_VALUE_INTEGER ||
+			ast->varAssign.expr->type != TOY_AST_VALUE ||
+			TOY_VALUE_AS_INTEGER(ast->varAssign.expr->value.value) != 69)
+		{
+			fprintf(stderr, TOY_CC_ERROR "ERROR: failed to emit an assign as 'Toy_Ast', state unknown\n" TOY_CC_RESET);
+			return -1;
+		}
+	}
+
+	//emit compare
+	{
+		//build the AST
+		Toy_Ast* ast = NULL;
+		Toy_Ast* right = NULL;
+		Toy_private_emitAstValue(bucketHandle, &ast, TOY_VALUE_FROM_INTEGER(42)); //technically, not a valid value
+		Toy_private_emitAstValue(bucketHandle, &right, TOY_VALUE_FROM_INTEGER(69));
+		Toy_private_emitAstCompare(bucketHandle, &ast, TOY_AST_FLAG_ADD, right);
+
+		//check if it worked
+		if (
+			ast == NULL ||
+			ast->type != TOY_AST_COMPARE ||
+			ast->compare.flag != TOY_AST_FLAG_ADD ||
+			ast->compare.left->type != TOY_AST_VALUE ||
+			TOY_VALUE_AS_INTEGER(ast->compare.left->value.value) != 42 ||
+			ast->compare.right->type != TOY_AST_VALUE ||
+			TOY_VALUE_AS_INTEGER(ast->compare.right->value.value) != 69)
+		{
+			fprintf(stderr, TOY_CC_ERROR "ERROR: failed to emit a compare as 'Toy_Ast', state unknown\n" TOY_CC_RESET);
 			return -1;
 		}
 	}

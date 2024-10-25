@@ -364,7 +364,7 @@ int test_routine_expressions(Toy_Bucket** bucketHandle) {
 			//code start
 			*((unsigned char*)(code + 0)) != TOY_OPCODE_READ ||
 			*((unsigned char*)(code + 1)) != TOY_VALUE_STRING ||
-			*((unsigned char*)(code + 2)) != 0 ||
+			*((unsigned char*)(code + 2)) != TOY_STRING_LEAF ||
 			*((unsigned char*)(code + 3)) != 0 ||
 			*(unsigned int*)(code + 4) != 0 || //the jump index
 			*((unsigned char*)(code + 8)) != TOY_OPCODE_RETURN ||
@@ -470,7 +470,7 @@ int test_routine_binary(Toy_Bucket** bucketHandle) {
 			*(int*)(buffer + 36) != 5 ||
 
 			*((unsigned char*)(buffer + 40)) != TOY_OPCODE_ADD ||
-			*((unsigned char*)(buffer + 41)) != 0 ||
+			*((unsigned char*)(buffer + 41)) != TOY_OPCODE_PASS ||
 			*((unsigned char*)(buffer + 42)) != 0 ||
 			*((unsigned char*)(buffer + 43)) != 0 ||
 
@@ -670,7 +670,7 @@ int test_routine_binary(Toy_Bucket** bucketHandle) {
 			*(int*)(buffer + 36) != 2 ||
 
 			*((unsigned char*)(buffer + 40)) != TOY_OPCODE_ADD ||
-			*((unsigned char*)(buffer + 41)) != 0 ||
+			*((unsigned char*)(buffer + 41)) != TOY_OPCODE_PASS ||
 			*((unsigned char*)(buffer + 42)) != 0 ||
 			*((unsigned char*)(buffer + 43)) != 0 ||
 
@@ -688,13 +688,13 @@ int test_routine_binary(Toy_Bucket** bucketHandle) {
 			*(int*)(buffer + 56) != 4 ||
 
 			*((unsigned char*)(buffer + 60)) != TOY_OPCODE_ADD ||
-			*((unsigned char*)(buffer + 61)) != 0 ||
+			*((unsigned char*)(buffer + 61)) != TOY_OPCODE_PASS ||
 			*((unsigned char*)(buffer + 62)) != 0 ||
 			*((unsigned char*)(buffer + 63)) != 0 ||
 
 			//multiply the two values
 			*((unsigned char*)(buffer + 64)) != TOY_OPCODE_MULTIPLY ||
-			*((unsigned char*)(buffer + 65)) != 0 ||
+			*((unsigned char*)(buffer + 65)) != TOY_OPCODE_PASS ||
 			*((unsigned char*)(buffer + 66)) != 0 ||
 			*((unsigned char*)(buffer + 67)) != 0 ||
 
@@ -912,7 +912,7 @@ int main() {
 		total += res;
 	}
 
-		{
+	{
 		Toy_Bucket* bucket = Toy_allocateBucket(TOY_BUCKET_IDEAL);
 		res = test_routine_keywords(&bucket);
 		Toy_freeBucket(&bucket);

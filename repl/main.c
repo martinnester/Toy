@@ -263,18 +263,6 @@ int repl(const char* filepath) {
 		//free the bytecode, and leave the VM ready for the next loop
 		Toy_resetVM(&vm);
 
-		//count the bucket memory - hang on, this this garbage collection??
-		Toy_Bucket* iter = bucket;
-		int depth = 0;
-		while (iter->next) {
-			iter = iter->next;
-			if (++depth >= 7) {
-				Toy_freeBucket(&bucket);
-				bucket = Toy_allocateBucket(TOY_BUCKET_IDEAL);
-				break;
-			}
-		}
-
 		printf("%s> ", prompt); //shows the terminal prompt
 	}
 
@@ -331,9 +319,12 @@ static void debugStackPrint(Toy_Stack* stack) {
 				}
 
 				case TOY_VALUE_ARRAY:
-				case TOY_VALUE_DICTIONARY:
+				case TOY_VALUE_TABLE:
 				case TOY_VALUE_FUNCTION:
 				case TOY_VALUE_OPAQUE:
+				case TOY_VALUE_TYPE:
+				case TOY_VALUE_ANY:
+				case TOY_VALUE_UNKNOWN:
 					printf("???");
 					break;
 			}
@@ -393,9 +384,12 @@ static void debugScopePrint(Toy_Scope* scope, int depth) {
 				}
 
 				case TOY_VALUE_ARRAY:
-				case TOY_VALUE_DICTIONARY:
+				case TOY_VALUE_TABLE:
 				case TOY_VALUE_FUNCTION:
 				case TOY_VALUE_OPAQUE:
+				case TOY_VALUE_TYPE:
+				case TOY_VALUE_ANY:
+				case TOY_VALUE_UNKNOWN:
 					printf("???");
 					break;
 			}

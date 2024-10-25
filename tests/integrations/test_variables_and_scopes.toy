@@ -4,3 +4,19 @@ var answer = 42;
 //declare a variable without an initial value
 var empty;
 
+//assign a previously existing variable
+answer = 6 * 9;
+
+
+/* TODO: implement compound assignments
+answer += 5;
+
+answer -= 5;
+
+answer *= 9;
+
+answer /= 2;
+
+answer %= 10;
+
+*/
