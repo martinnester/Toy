@@ -254,9 +254,8 @@ static Toy_AstFlag nameString(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy
 		return TOY_AST_FLAG_NONE;
 	}
 
-	//access
-	printError(parser, parser->previous, "Unexpectedly found a variable access; this is not yet implemented");
-	Toy_private_emitAstError(bucketHandle, rootHandle);
+	//assume it's an access
+	Toy_private_emitAstVariableAccess(bucketHandle, rootHandle, name);
 	return TOY_AST_FLAG_NONE;
 }
 

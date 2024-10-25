@@ -165,7 +165,7 @@ static void processAssign(Toy_VM* vm) {
 	Toy_Value value = Toy_popStack(&vm->stack);
 	Toy_Value name = Toy_popStack(&vm->stack);
 
-	//check string type
+	//check name string type
 	if (!TOY_VALUE_IS_STRING(name) && TOY_VALUE_AS_STRING(name)->type != TOY_STRING_NAME) {
 		Toy_error("Invalid assignment target");
 		return;
@@ -173,6 +173,22 @@ static void processAssign(Toy_VM* vm) {
 
 	//assign it
 	Toy_assignScope(vm->scope, TOY_VALUE_AS_STRING(name), value);
+
+	//cleanup
+	Toy_freeValue(name);
+}
+static void processAccess(Toy_VM* vm) {
+	Toy_Value name = Toy_popStack(&vm->stack);
+
+	//check name string type
+	if (!TOY_VALUE_IS_STRING(name) && TOY_VALUE_AS_STRING(name)->type != TOY_STRING_NAME) {
+		Toy_error("Invalid access target");
+		return;
+	}
+
+	//find and push the value
+	Toy_Value value = Toy_accessScope(vm->scope, TOY_VALUE_AS_STRING(name));
+	Toy_pushStack(&vm->stack, value);
 
 	//cleanup
 	Toy_freeValue(name);
@@ -248,6 +264,12 @@ static void processDuplicate(Toy_VM* vm) {
 	Toy_Value value = Toy_copyValue(Toy_peekStack(&vm->stack));
 	Toy_pushStack(&vm->stack, value);
 	Toy_freeValue(value);
+
+	//check for compound assignments
+	Toy_OpcodeType squeezed = READ_BYTE(vm);
+	if (squeezed == TOY_OPCODE_ACCESS) {
+		processAccess(vm);
+	}
 }
 
 static void processComparison(Toy_VM* vm, Toy_OpcodeType opcode) {
@@ -421,6 +443,10 @@ static void process(Toy_VM* vm) {
 				processAssign(vm);
 				break;
 
+			case TOY_OPCODE_ACCESS:
+				processAccess(vm);
+				break;
+
 			case TOY_OPCODE_DUPLICATE:
 				processDuplicate(vm);
 				break;
@@ -464,11 +490,6 @@ static void process(Toy_VM* vm) {
 			case TOY_OPCODE_CONCAT:
 				processConcat(vm);
 				break;
-
-			//not yet implemented
-			case TOY_OPCODE_ACCESS:
-				fprintf(stderr, TOY_CC_ERROR "ERROR: Incomplete opcode %d found, exiting\n" TOY_CC_RESET, opcode);
-				exit(-1);
 
 			case TOY_OPCODE_PASS:
 			case TOY_OPCODE_ERROR:

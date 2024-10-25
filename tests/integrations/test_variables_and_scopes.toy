@@ -7,8 +7,8 @@ var empty;
 //assign a previously existing variable
 answer = 6 * 9;
 
+answer = answer + 1;
 
-/* TODO: implement compound assignments
 answer += 5;
 
 answer -= 5;
@@ -19,4 +19,3 @@ answer /= 2;
 
 answer %= 10;
 
-*/

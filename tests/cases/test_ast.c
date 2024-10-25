@@ -17,14 +17,15 @@ int test_sizeof_ast_64bit() {
 	//run for each type
 	TEST_SIZEOF(Toy_AstType, 4);
 	TEST_SIZEOF(Toy_AstBlock, 32);
-	TEST_SIZEOF(Toy_AstVarDeclare, 24);
 	TEST_SIZEOF(Toy_AstValue, 24);
 	TEST_SIZEOF(Toy_AstUnary, 16);
 	TEST_SIZEOF(Toy_AstBinary, 24);
-	TEST_SIZEOF(Toy_AstVarAssign, 24);
 	TEST_SIZEOF(Toy_AstCompare, 24);
 	TEST_SIZEOF(Toy_AstGroup, 16);
 	TEST_SIZEOF(Toy_AstPrint, 16);
+	TEST_SIZEOF(Toy_AstVarDeclare, 24);
+	TEST_SIZEOF(Toy_AstVarAssign, 24);
+	TEST_SIZEOF(Toy_AstVarAccess, 16);
 	TEST_SIZEOF(Toy_AstPass, 4);
 	TEST_SIZEOF(Toy_AstError, 4);
 	TEST_SIZEOF(Toy_AstEnd, 4);
@@ -48,14 +49,15 @@ int test_sizeof_ast_32bit() {
 	//run for each type
 	TEST_SIZEOF(Toy_AstType, 4);
 	TEST_SIZEOF(Toy_AstBlock, 16);
-	TEST_SIZEOF(Toy_AstVarDeclare, 12);
 	TEST_SIZEOF(Toy_AstValue, 12);
 	TEST_SIZEOF(Toy_AstUnary, 12);
 	TEST_SIZEOF(Toy_AstBinary, 16);
-	TEST_SIZEOF(Toy_AstVarAssign, 16);
 	TEST_SIZEOF(Toy_AstCompare, 16);
 	TEST_SIZEOF(Toy_AstGroup, 8);
 	TEST_SIZEOF(Toy_AstPrint, 8);
+	TEST_SIZEOF(Toy_AstVarDeclare, 12);
+	TEST_SIZEOF(Toy_AstVarAssign, 16);
+	TEST_SIZEOF(Toy_AstVarAccess, 8);
 	TEST_SIZEOF(Toy_AstPass, 4);
 	TEST_SIZEOF(Toy_AstError, 4);
 	TEST_SIZEOF(Toy_AstEnd, 4);
@@ -124,32 +126,6 @@ int test_type_emission(Toy_Bucket** bucketHandle) {
 			TOY_VALUE_AS_INTEGER(ast->binary.right->value.value) != 69)
 		{
 			fprintf(stderr, TOY_CC_ERROR "ERROR: failed to emit a binary as 'Toy_Ast', state unknown\n" TOY_CC_RESET);
-			return -1;
-		}
-	}
-
-	//emit assign
-	{
-		//build the AST
-		Toy_Ast* ast = NULL;
-		Toy_Ast* right = NULL;
-		Toy_String* name = Toy_createNameStringLength(bucketHandle, "foobar", 6, TOY_VALUE_INTEGER);
-		Toy_private_emitAstValue(bucketHandle, &right, TOY_VALUE_FROM_INTEGER(69));
-		Toy_private_emitAstVariableAssignment(bucketHandle, &ast, name, TOY_AST_FLAG_ASSIGN, right);
-
-		//check if it worked
-		if (
-			ast == NULL ||
-			ast->type != TOY_AST_VAR_ASSIGN ||
-			ast->varAssign.flag != TOY_AST_FLAG_ASSIGN ||
-			ast->varAssign.name == NULL ||
-			ast->varAssign.name->type != TOY_STRING_NAME ||
-			strcmp(ast->varAssign.name->as.name.data, "foobar") != 0 ||
-			ast->varAssign.name->as.name.type != TOY_VALUE_INTEGER ||
-			ast->varAssign.expr->type != TOY_AST_VALUE ||
-			TOY_VALUE_AS_INTEGER(ast->varAssign.expr->value.value) != 69)
-		{
-			fprintf(stderr, TOY_CC_ERROR "ERROR: failed to emit an assign as 'Toy_Ast', state unknown\n" TOY_CC_RESET);
 			return -1;
 		}
 	}
@@ -302,6 +278,55 @@ int test_type_emission(Toy_Bucket** bucketHandle) {
 		//cleanup
 		Toy_freeString(name);
 	}
+
+	//emit assign
+	{
+		//build the AST
+		Toy_Ast* ast = NULL;
+		Toy_Ast* right = NULL;
+		Toy_String* name = Toy_createNameStringLength(bucketHandle, "foobar", 6, TOY_VALUE_INTEGER);
+		Toy_private_emitAstValue(bucketHandle, &right, TOY_VALUE_FROM_INTEGER(69));
+		Toy_private_emitAstVariableAssignment(bucketHandle, &ast, name, TOY_AST_FLAG_ASSIGN, right);
+
+		//check if it worked
+		if (
+			ast == NULL ||
+			ast->type != TOY_AST_VAR_ASSIGN ||
+			ast->varAssign.flag != TOY_AST_FLAG_ASSIGN ||
+			ast->varAssign.name == NULL ||
+			ast->varAssign.name->type != TOY_STRING_NAME ||
+			strcmp(ast->varAssign.name->as.name.data, "foobar") != 0 ||
+			ast->varAssign.name->as.name.type != TOY_VALUE_INTEGER ||
+			ast->varAssign.expr->type != TOY_AST_VALUE ||
+			TOY_VALUE_AS_INTEGER(ast->varAssign.expr->value.value) != 69)
+		{
+			fprintf(stderr, TOY_CC_ERROR "ERROR: failed to emit an assign as 'Toy_Ast', state unknown\n" TOY_CC_RESET);
+			return -1;
+		}
+	}
+
+	//emit access
+	{
+		//build the AST
+		Toy_Ast* ast = NULL;
+		Toy_Ast* right = NULL;
+		Toy_String* name = Toy_createNameStringLength(bucketHandle, "foobar", 6, TOY_VALUE_INTEGER);
+		Toy_private_emitAstVariableAccess(bucketHandle, &ast, name);
+
+		//check if it worked
+		if (
+			ast == NULL ||
+			ast->type != TOY_AST_VAR_ACCESS ||
+			ast->varAccess.name == NULL ||
+			ast->varAccess.name->type != TOY_STRING_NAME ||
+			strcmp(ast->varAccess.name->as.name.data, "foobar") != 0 ||
+			ast->varAccess.name->as.name.type != TOY_VALUE_INTEGER)
+		{
+			fprintf(stderr, TOY_CC_ERROR "ERROR: failed to emit an access as 'Toy_Ast', state unknown\n" TOY_CC_RESET);
+			return -1;
+		}
+	}
+
 
 	return 0;
 }
