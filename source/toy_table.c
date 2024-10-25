@@ -89,9 +89,15 @@ Toy_Table* Toy_allocateTable() {
 }
 
 void Toy_freeTable(Toy_Table* table) {
-	//TODO: slip in a call to free the complex values here
+	if (table != NULL) {
+		//if some values will be removed, free them first
+		for (unsigned int i = 0; i < table->capacity; i++) {
+			Toy_freeValue(table->data[i].key);
+			Toy_freeValue(table->data[i].value);
+		}
 
-	free(table);
+		free(table);
+	}
 }
 
 void Toy_insertTable(Toy_Table** tableHandle, Toy_Value key, Toy_Value value) {

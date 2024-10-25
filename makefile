@@ -26,7 +26,7 @@ repl: source
 
 #various kinds of available tests
 .PHONY: tests
-tests: clean test-cases
+tests: clean test-cases test-integrations
 
 .PHONY: test-all
 test-all: clean test-cases test-integrations test-benchmarks

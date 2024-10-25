@@ -19,9 +19,12 @@ Toy_Stack* Toy_allocateStack() {
 }
 
 void Toy_freeStack(Toy_Stack* stack) {
-	//TODO: slip in a call to free the complex values here
-
 	if (stack != NULL) {
+		//if some values will be removed, free them first
+		for (unsigned int i = 0; i < stack->count; i++) {
+			Toy_freeValue(stack->data[i]);
+		}
+
 		free(stack);
 	}
 }
