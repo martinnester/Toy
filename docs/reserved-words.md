@@ -4,6 +4,7 @@ The following list of words have special meaning to the language, so they can't 
 
 ```txt
 any
+array
 as
 assert
 bool
@@ -19,6 +20,7 @@ float
 fn
 for
 foreach
+function
 if
 import
 in
@@ -29,6 +31,7 @@ opaque
 print
 return
 string
+table
 true
 type
 typeas
