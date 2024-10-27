@@ -21,9 +21,9 @@ const Toy_KeywordTypeTuple keywordTuples[] = {
 	{TOY_TOKEN_TYPE_INTEGER, "int"},
 	{TOY_TOKEN_TYPE_FLOAT, "float"},
 	{TOY_TOKEN_TYPE_STRING, "string"},
-	// TOY_TOKEN_TYPE_ARRAY,
-	// TOY_TOKEN_TYPE_DICTIONARY,
-	// TOY_TOKEN_TYPE_FUNCTION,
+	{TOY_TOKEN_TYPE_ARRAY, "array"},
+	{TOY_TOKEN_TYPE_TABLE, "table"},
+	{TOY_TOKEN_TYPE_FUNCTION, "function"}, //TODO: type??
 	{TOY_TOKEN_TYPE_OPAQUE, "opaque"},
 	{TOY_TOKEN_TYPE_ANY, "any"},
 
