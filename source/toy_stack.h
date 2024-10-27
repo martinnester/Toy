@@ -25,8 +25,8 @@ TOY_API Toy_Value Toy_popStack(Toy_Stack** stackHandle);
 #define TOY_STACK_EXPANSION_RATE 2
 #endif
 
-#ifndef TOY_STACK_CONTRACTION_RATE
-#define TOY_STACK_CONTRACTION_RATE (1 / 4)
+#ifndef TOY_STACK_CONTRACTION_THRESHOLD
+#define TOY_STACK_CONTRACTION_THRESHOLD (1 / 4)
 #endif
 
 //prevent an infinite expansion, limited to 1MB

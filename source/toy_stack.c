@@ -72,7 +72,7 @@ Toy_Value Toy_popStack(Toy_Stack** stackHandle) {
 	}
 
 	//shrink if possible
-	if ((*stackHandle)->count > TOY_STACK_INITIAL_CAPACITY && (*stackHandle)->count < (*stackHandle)->capacity * TOY_STACK_CONTRACTION_RATE) {
+	if ((*stackHandle)->count > TOY_STACK_INITIAL_CAPACITY && (*stackHandle)->count < (*stackHandle)->capacity * TOY_STACK_CONTRACTION_THRESHOLD) {
 		(*stackHandle)->capacity /= 2;
 		unsigned int newCapacity = (*stackHandle)->capacity;
 
