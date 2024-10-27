@@ -565,6 +565,9 @@ static void makeExpr(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** ro
 	parsePrecedence(bucketHandle, parser, rootHandle, PREC_ASSIGNMENT);
 }
 
+//forward declarations
+static void makeBlockStmt(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle);
+
 static void makePrintStmt(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle) {
 	makeExpr(bucketHandle, parser, rootHandle);
 	Toy_private_emitAstPrint(bucketHandle, rootHandle);
@@ -608,7 +611,14 @@ static void makeVariableDeclarationStmt(Toy_Bucket** bucketHandle, Toy_Parser* p
 }
 
 static void makeStmt(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle) {
-	//block
+	//inner scope
+	if (match(parser, TOY_TOKEN_OPERATOR_BRACE_LEFT)) {
+		makeBlockStmt(bucketHandle, parser, rootHandle);
+		consume(parser, TOY_TOKEN_OPERATOR_BRACE_RIGHT, "Expected '}' at the end of block scope");
+		(*rootHandle)->block.innerScope = true;
+		return;
+	}
+
 	//assert
 	//if-then-else
 	//while-then
@@ -619,7 +629,7 @@ static void makeStmt(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** ro
 	//import
 
 	//check for empty lines
-	if (match(parser, TOY_TOKEN_OPERATOR_SEMICOLON)) {
+	else if (match(parser, TOY_TOKEN_OPERATOR_SEMICOLON)) {
 		Toy_private_emitAstPass(bucketHandle, rootHandle);
 		return;
 	}
@@ -658,7 +668,7 @@ static void makeBlockStmt(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast
 	Toy_private_initAstBlock(bucketHandle, rootHandle);
 
 	//read a series of statements into the block
-	while (!match(parser, TOY_TOKEN_EOF)) {
+	while (parser->current.type != TOY_TOKEN_OPERATOR_BRACE_RIGHT && !match(parser, TOY_TOKEN_EOF)) {
 		//process the grammar rules
 		Toy_Ast* stmt = NULL;
 		makeDeclarationStmt(bucketHandle, parser, &stmt);
@@ -694,6 +704,11 @@ Toy_Ast* Toy_scanParser(Toy_Bucket** bucketHandle, Toy_Parser* parser) {
 	}
 
 	makeBlockStmt(bucketHandle, parser, &rootHandle);
+
+	//don't emit this error if we're already panicking
+	if (parser->panic != true && parser->previous.type != TOY_TOKEN_EOF) {
+		printError(parser, parser->previous, "Expected 'EOF' and the end of the parser scan (possibly an extra '}' was found)");
+	}
 
 	return rootHandle;
 }

@@ -4,6 +4,7 @@ void Toy_private_initAstBlock(Toy_Bucket** bucketHandle, Toy_Ast** astHandle) {
 	Toy_Ast* tmp = (Toy_Ast*)Toy_partitionBucket(bucketHandle, sizeof(Toy_Ast));
 
 	tmp->type = TOY_AST_BLOCK;
+	tmp->block.innerScope = false;
 	tmp->block.child = NULL;
 	tmp->block.next = NULL;
 	tmp->block.tail = NULL;

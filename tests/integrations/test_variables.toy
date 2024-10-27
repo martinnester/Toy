@@ -7,15 +7,13 @@ var empty;
 //assign a previously existing variable
 answer = 6 * 9;
 
+//access a variable
 answer = answer + 1;
 
+//compound assignments
 answer += 5;
-
 answer -= 5;
-
 answer *= 9;
-
 answer /= 2;
-
 answer %= 10;
 

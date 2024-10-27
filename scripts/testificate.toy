@@ -1,0 +1,22 @@
+
+//normal scope stuff
+var answer = 42;
+print answer;
+
+{
+	var answer = 7;
+	print answer;
+}
+
+print answer;
+
+//I wonder if...
+var question = 42;
+print question;
+
+{
+	var question = question;
+	print question;
+}
+
+print question;

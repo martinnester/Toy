@@ -410,8 +410,22 @@ static void writeRoutineCode(Toy_Routine** rt, Toy_Ast* ast) {
 	//determine how to write each instruction based on the Ast
 	switch(ast->type) {
 		case TOY_AST_BLOCK:
+			if (ast->block.innerScope) {
+				EMIT_BYTE(rt, code, TOY_OPCODE_SCOPE_PUSH);
+				EMIT_BYTE(rt, code, 0);
+				EMIT_BYTE(rt, code, 0);
+				EMIT_BYTE(rt, code, 0);
+			}
+
 			writeRoutineCode(rt, ast->block.child);
 			writeRoutineCode(rt, ast->block.next);
+
+			if (ast->block.innerScope) {
+				EMIT_BYTE(rt, code, TOY_OPCODE_SCOPE_POP);
+				EMIT_BYTE(rt, code, 0);
+				EMIT_BYTE(rt, code, 0);
+				EMIT_BYTE(rt, code, 0);
+			}
 			break;
 
 		case TOY_AST_VALUE:

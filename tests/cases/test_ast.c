@@ -48,7 +48,7 @@ int test_sizeof_ast_32bit() {
 
 	//run for each type
 	TEST_SIZEOF(Toy_AstType, 4);
-	TEST_SIZEOF(Toy_AstBlock, 16);
+	TEST_SIZEOF(Toy_AstBlock, 20);
 	TEST_SIZEOF(Toy_AstValue, 12);
 	TEST_SIZEOF(Toy_AstUnary, 12);
 	TEST_SIZEOF(Toy_AstBinary, 16);
@@ -61,7 +61,7 @@ int test_sizeof_ast_32bit() {
 	TEST_SIZEOF(Toy_AstPass, 4);
 	TEST_SIZEOF(Toy_AstError, 4);
 	TEST_SIZEOF(Toy_AstEnd, 4);
-	TEST_SIZEOF(Toy_Ast, 16);
+	TEST_SIZEOF(Toy_Ast, 20);
 
 #undef TEST_SIZEOF
 

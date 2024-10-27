@@ -33,6 +33,9 @@ typedef enum Toy_OpcodeType {
 	//control instructions
 	TOY_OPCODE_RETURN,
 
+	TOY_OPCODE_SCOPE_PUSH,
+	TOY_OPCODE_SCOPE_POP,
+
 	//various action instructions
 	TOY_OPCODE_PRINT,
 	TOY_OPCODE_CONCAT,

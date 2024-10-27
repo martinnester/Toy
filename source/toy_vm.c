@@ -482,6 +482,14 @@ static void process(Toy_VM* vm) {
 				//temp terminator
 				return;
 
+			case TOY_OPCODE_SCOPE_PUSH:
+				vm->scope = Toy_pushScope(&vm->scopeBucket, vm->scope);
+				break;
+
+			case TOY_OPCODE_SCOPE_POP:
+				vm->scope = Toy_popScope(vm->scope);
+				break;
+
 			//various action instructions
 			case TOY_OPCODE_PRINT:
 				processPrint(vm);

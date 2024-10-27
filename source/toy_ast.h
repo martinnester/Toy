@@ -69,6 +69,7 @@ typedef union Toy_Ast Toy_Ast;
 
 typedef struct Toy_AstBlock {
 	Toy_AstType type;
+	bool innerScope;
 	Toy_Ast* child; //begin encoding the line
 	Toy_Ast* next; //'next' is either an AstBlock or null
 	Toy_Ast* tail; //'tail' - either points to the tail of the current list, or null; only used by the head of a list as an optimisation
