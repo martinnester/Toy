@@ -8,4 +8,5 @@ The reference implementation can be found on [GitHub](https://github.com/Ratstai
 
 [Reserved Words](reserved-words.md)  
 [Operators](operators.md)  
+[Types](types.md)  
 
