@@ -309,11 +309,14 @@ static Toy_AstFlag literal(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_As
 
 		case TOY_TOKEN_LITERAL_STRING: {
 			char buffer[parser->previous.length + 1];
+			unsigned int escapeCounter = 0;
 
 			unsigned int i = 0, o = 0;
 			do {
 				buffer[i] = parser->previous.lexeme[o];
 				if (buffer[i] == '\\' && parser->previous.lexeme[++o]) {
+					escapeCounter++;
+
 					//also handle escape characters
 					switch(parser->previous.lexeme[o]) {
 						case 'n':
@@ -334,7 +337,7 @@ static Toy_AstFlag literal(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_As
 			} while (parser->previous.lexeme[o++] && i < parser->previous.length);
 
 			buffer[i] = '\0';
-			Toy_private_emitAstValue(bucketHandle, rootHandle, TOY_VALUE_FROM_STRING(Toy_createStringLength(bucketHandle, buffer, i)));
+			Toy_private_emitAstValue(bucketHandle, rootHandle, TOY_VALUE_FROM_STRING(Toy_createStringLength(bucketHandle, buffer, i - escapeCounter)));
 
 			return TOY_AST_FLAG_NONE;
 		}
