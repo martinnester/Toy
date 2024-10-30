@@ -243,6 +243,5 @@ int main() {
 		total += res;
 	}
 
-	printf(TOY_CC_NOTICE "All good\n" TOY_CC_RESET);
-	return 0;
+	return total;
 }
