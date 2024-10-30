@@ -15,7 +15,7 @@ static void probeAndInsert(Toy_Table** tableHandle, Toy_Value key, Toy_Value val
 	//probe
 	while (true) {
 		//if we're overriding an existing value
-		if (TOY_VALUES_ARE_EQUAL((*tableHandle)->data[probe].key, key)) {
+		if (Toy_checkValuesAreEqual((*tableHandle)->data[probe].key, key)) {
 			(*tableHandle)->data[probe] = entry;
 
 			//TODO: benchmark the psl optimisation
@@ -123,7 +123,7 @@ Toy_Value Toy_lookupTable(Toy_Table** tableHandle, Toy_Value key) {
 
 	while (true) {
 		//found the entry
-		if (TOY_VALUES_ARE_EQUAL((*tableHandle)->data[probe].key, key)) {
+		if (Toy_checkValuesAreEqual((*tableHandle)->data[probe].key, key)) {
 			return (*tableHandle)->data[probe].value;
 		}
 
@@ -148,7 +148,7 @@ void Toy_removeTable(Toy_Table** tableHandle, Toy_Value key) {
 
 	while (true) {
 		//found the entry
-		if (TOY_VALUES_ARE_EQUAL((*tableHandle)->data[probe].key, key)) {
+		if (Toy_checkValuesAreEqual((*tableHandle)->data[probe].key, key)) {
 			break;
 		}
 

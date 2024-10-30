@@ -1,22 +1,38 @@
 
-//normal scope stuff
-var answer = 42;
-print answer;
 
-{
-	var answer = 7;
-	print answer;
-}
+print 1 == 1; //true
+print 1 != 1; //false
 
-print answer;
+print 1 < 2; //true
 
-//I wonder if...
-var question = 42;
-print question;
+print "foo" > "bar"; //true
 
-{
-	var question = question;
-	print question;
-}
 
-print question;
+print 1 < 2; //true
+print 1 > 2; //false
+
+print 2 <= 2; //true
+print 2 >= 2; //true
+
+print 1 <= 2; //true
+print 1 >= 2; //false
+
+print true && true; //true
+print true && false; //false
+print false && true; //false
+print false && false; //false
+
+print true || true; //true
+print true || false; //true
+print false || true; //true
+print false || false; //false
+
+print !true; //false
+print !false; //true
+
+
+
+
+
+//nesting
+print true && false || true; //TODO: a warning is needed for this

@@ -199,8 +199,8 @@ static ParsingTuple parsingRulesetTable[] = {
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_BRACE_RIGHT,
 
 	//other operators
-	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_AND,
-	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_OR,
+	{PREC_AND,NULL,binary},// TOY_TOKEN_OPERATOR_AND,
+	{PREC_OR,NULL,binary},// TOY_TOKEN_OPERATOR_OR,
 	{PREC_NONE,unary,NULL},// TOY_TOKEN_OPERATOR_NEGATE,
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_QUESTION,
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_COLON,
@@ -470,6 +470,17 @@ static Toy_AstFlag binary(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast
 		case TOY_TOKEN_OPERATOR_COMPARE_GREATER_EQUAL: {
 			parsePrecedence(bucketHandle, parser, rootHandle, PREC_COMPARISON + 1);
 			return TOY_AST_FLAG_COMPARE_GREATER_EQUAL;
+		}
+
+		//logical
+		case TOY_TOKEN_OPERATOR_AND: {
+			parsePrecedence(bucketHandle, parser, rootHandle, PREC_AND + 1);
+			return TOY_AST_FLAG_AND;
+		}
+
+		case TOY_TOKEN_OPERATOR_OR: {
+			parsePrecedence(bucketHandle, parser, rootHandle, PREC_OR + 1);
+			return TOY_AST_FLAG_OR;
 		}
 
 		case TOY_TOKEN_OPERATOR_CONCAT: {

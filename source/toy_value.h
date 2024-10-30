@@ -57,13 +57,13 @@ typedef struct Toy_Value {          //32 | 64 BITNESS
 #define TOY_VALUE_FROM_STRING(value)			((Toy_Value){{ .string = value }, TOY_VALUE_STRING})
 //TODO: more
 
-#define TOY_VALUE_IS_TRUTHY(value) Toy_private_isTruthy(value)
-TOY_API bool Toy_private_isTruthy(Toy_Value value);
-
-#define TOY_VALUES_ARE_EQUAL(left, right) Toy_private_isEqual(left, right)
-TOY_API bool Toy_private_isEqual(Toy_Value left, Toy_Value right);
-
-unsigned int Toy_hashValue(Toy_Value value);
+//utilities
+TOY_API unsigned int Toy_hashValue(Toy_Value value);
 
 TOY_API Toy_Value Toy_copyValue(Toy_Value value);
 TOY_API void Toy_freeValue(Toy_Value value);
+
+TOY_API bool Toy_checkValueIsTruthy(Toy_Value value);
+TOY_API bool Toy_checkValuesAreEqual(Toy_Value left, Toy_Value right);
+TOY_API bool Toy_checkValuesAreComparable(Toy_Value left, Toy_Value right);
+TOY_API int Toy_compareValues(Toy_Value left, Toy_Value right);

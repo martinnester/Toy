@@ -5,16 +5,18 @@
 #include "toy_string.h"
 
 #include <stdio.h>
+#include <string.h>
 
-int main() {
+int test_value_creation() {
 	//test for the correct size
 	{
 #if TOY_BITNESS == 64
-		if (sizeof(Toy_Value) != 16) {
+		if (sizeof(Toy_Value) != 16)
 #else
-		if (sizeof(Toy_Value) != 8) {
+		if (sizeof(Toy_Value) != 8)
 #endif
-			fprintf(stderr, TOY_CC_ERROR "ERROR: 'Toy_Value' is an unexpected size in memory\n" TOY_CC_RESET);
+		{
+			fprintf(stderr, TOY_CC_ERROR "ERROR: 'Toy_Value' is an unexpected size in memory, expected %d found %d\n" TOY_CC_RESET, TOY_BITNESS, sizeof(Toy_Value));
 			return -1;
 		}
 	}
@@ -29,34 +31,147 @@ int main() {
 		}
 	}
 
-	//test creating values
+	//test creating booleans
 	{
 		Toy_Value t = TOY_VALUE_FROM_BOOLEAN(true);
 		Toy_Value f = TOY_VALUE_FROM_BOOLEAN(false);
 
-		if (!TOY_VALUE_IS_TRUTHY(t) || TOY_VALUE_IS_TRUTHY(f)) {
+		if (!Toy_checkValueIsTruthy(t) || Toy_checkValueIsTruthy(f)) {
 			fprintf(stderr, TOY_CC_ERROR "ERROR: 'boolean' value failed\n" TOY_CC_RESET);
 			return -1;
 		}
 	}
 
+	//test creating strings
+	{
+		//setup
+		Toy_Bucket* bucket = Toy_allocateBucket(TOY_BUCKET_SMALL);
+
+		Toy_Value greeting = TOY_VALUE_FROM_STRING(Toy_createString(&bucket, "Hello world!"));
+
+		if (TOY_VALUE_IS_STRING(greeting) == false ||
+			TOY_VALUE_AS_STRING(greeting)->type != TOY_STRING_LEAF ||
+			strcmp(TOY_VALUE_AS_STRING(greeting)->as.leaf.data, "Hello world!") != 0
+		)
+		{
+			fprintf(stderr, TOY_CC_ERROR "ERROR: 'string' value failed\n" TOY_CC_RESET);
+			Toy_freeBucket(&bucket);
+			return -1;
+		}
+
+		//cleanup
+		Toy_freeBucket(&bucket);
+	}
+
+	return 0;
+}
+
+int test_value_equality() {
 	//test value equality
 	{
 		Toy_Value answer = TOY_VALUE_FROM_INTEGER(42);
 		Toy_Value question = TOY_VALUE_FROM_INTEGER(42);
 		Toy_Value nice = TOY_VALUE_FROM_INTEGER(69);
 
-		if (!TOY_VALUES_ARE_EQUAL(answer, question)) {
-			fprintf(stderr, TOY_CC_ERROR "ERROR: equality check failed, expected true\n" TOY_CC_RESET);
+		if (Toy_checkValuesAreEqual(answer, question) != true) {
+			fprintf(stderr, TOY_CC_ERROR "ERROR: value equality check failed, expected true\n" TOY_CC_RESET);
 			return -1;
 		}
 
-		if (TOY_VALUES_ARE_EQUAL(answer, nice)) {
-			fprintf(stderr, TOY_CC_ERROR "ERROR: equality check failed, expected false\n" TOY_CC_RESET);
+		if (Toy_checkValuesAreEqual(answer, nice) != false) {
+			fprintf(stderr, TOY_CC_ERROR "ERROR: value equality check failed, expected false\n" TOY_CC_RESET);
 			return -1;
 		}
 	}
 
+	//again with strings
+	{
+		//setup
+		Toy_Bucket* bucket = Toy_allocateBucket(TOY_BUCKET_SMALL);
+
+		Toy_Value answer = TOY_VALUE_FROM_STRING(Toy_createString(&bucket, "poe wrote on both"));
+		Toy_Value question = TOY_VALUE_FROM_STRING(Toy_createString(&bucket, "why is a raven like a writing desk?"));
+		Toy_Value duplicate = TOY_VALUE_FROM_STRING(Toy_createString(&bucket, "poe wrote on both"));
+
+		if (Toy_checkValuesAreEqual(answer, duplicate) != true) {
+			fprintf(stderr, TOY_CC_ERROR "ERROR: string value equality check failed, expected true\n" TOY_CC_RESET);
+			return -1;
+		}
+
+		if (Toy_checkValuesAreEqual(answer, question) != false) {
+			fprintf(stderr, TOY_CC_ERROR "ERROR: string value equality check failed, expected false\n" TOY_CC_RESET);
+			return -1;
+		}
+
+		//cleanup
+		Toy_freeBucket(&bucket);
+	}
+
+	return 0;
+}
+
+int test_value_comparison() {
+	//test value comparable
+	{
+		Toy_Value answer = TOY_VALUE_FROM_INTEGER(42);
+		Toy_Value question = TOY_VALUE_FROM_INTEGER(42);
+		Toy_Value nope = TOY_VALUE_FROM_NULL();
+
+		if (Toy_checkValuesAreComparable(answer, question) != true) {
+			fprintf(stderr, TOY_CC_ERROR "ERROR: value comparison check failed, expected true\n" TOY_CC_RESET);
+			return -1;
+		}
+
+		if (Toy_checkValuesAreComparable(answer, nope) != false) {
+			fprintf(stderr, TOY_CC_ERROR "ERROR: value comparison check failed, expected false\n" TOY_CC_RESET);
+			return -1;
+		}
+	}
+
+	//test comparison
+	{
+		Toy_Value answer = TOY_VALUE_FROM_INTEGER(42);
+		Toy_Value question = TOY_VALUE_FROM_INTEGER(42);
+		Toy_Value nice = TOY_VALUE_FROM_INTEGER(69);
+
+		if (Toy_compareValues(answer, question) != 0) {
+			fprintf(stderr, TOY_CC_ERROR "ERROR: value comparison failed, expected 0\n" TOY_CC_RESET);
+			return -1;
+		}
+
+		if (Toy_compareValues(answer, nice) == 0) {
+			fprintf(stderr, TOY_CC_ERROR "ERROR: value comparison failed, expected not 0\n" TOY_CC_RESET);
+			return -1;
+		}
+	}
+
+	//again with strings
+	{
+		//setup
+		Toy_Bucket* bucket = Toy_allocateBucket(TOY_BUCKET_SMALL);
+
+		Toy_Value answer = TOY_VALUE_FROM_STRING(Toy_createString(&bucket, "poe wrote on both"));
+		Toy_Value question = TOY_VALUE_FROM_STRING(Toy_createString(&bucket, "why is a raven like a writing desk?"));
+		Toy_Value duplicate = TOY_VALUE_FROM_STRING(Toy_createString(&bucket, "poe wrote on both"));
+
+		if (Toy_compareValues(answer, duplicate) != 0) {
+			fprintf(stderr, TOY_CC_ERROR "ERROR: string value comparison failed, expected 0\n" TOY_CC_RESET);
+			return -1;
+		}
+
+		if (Toy_compareValues(answer, question) == 0) {
+			fprintf(stderr, TOY_CC_ERROR "ERROR: string value comparison failed, expected not 0\n" TOY_CC_RESET);
+			return -1;
+		}
+
+		//cleanup
+		Toy_freeBucket(&bucket);
+	}
+
+	return 0;
+}
+
+int test_value_hashing() {
 	//test value hashing
 	{
 		//setup
@@ -85,6 +200,47 @@ int main() {
 
 		//cleanup
 		Toy_freeBucket(&bucket);
+	}
+
+	//NOTE: string hash is a PITA, skipping
+
+	return 0;
+}
+
+int main() {
+	//run each test set, returning the total errors given
+	int total = 0, res = 0;
+
+	{
+		res = test_value_creation();
+		if (res == 0) {
+			printf(TOY_CC_NOTICE "All good\n" TOY_CC_RESET);
+		}
+		total += res;
+	}
+
+	{
+		res = test_value_equality();
+		if (res == 0) {
+			printf(TOY_CC_NOTICE "All good\n" TOY_CC_RESET);
+		}
+		total += res;
+	}
+
+	{
+		res = test_value_comparison();
+		if (res == 0) {
+			printf(TOY_CC_NOTICE "All good\n" TOY_CC_RESET);
+		}
+		total += res;
+	}
+
+	{
+		res = test_value_hashing();
+		if (res == 0) {
+			printf(TOY_CC_NOTICE "All good\n" TOY_CC_RESET);
+		}
+		total += res;
 	}
 
 	printf(TOY_CC_NOTICE "All good\n" TOY_CC_RESET);

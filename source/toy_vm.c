@@ -194,6 +194,18 @@ static void processAccess(Toy_VM* vm) {
 	Toy_freeValue(name);
 }
 
+static void processDuplicate(Toy_VM* vm) {
+	Toy_Value value = Toy_copyValue(Toy_peekStack(&vm->stack));
+	Toy_pushStack(&vm->stack, value);
+	Toy_freeValue(value);
+
+	//check for compound assignments
+	Toy_OpcodeType squeezed = READ_BYTE(vm);
+	if (squeezed == TOY_OPCODE_ACCESS) {
+		processAccess(vm);
+	}
+}
+
 static void processArithmetic(Toy_VM* vm, Toy_OpcodeType opcode) {
 	Toy_Value right = Toy_popStack(&vm->stack);
 	Toy_Value left = Toy_popStack(&vm->stack);
@@ -214,7 +226,7 @@ static void processArithmetic(Toy_VM* vm, Toy_OpcodeType opcode) {
 
 	//check for modulo by a float
 	if (opcode == TOY_OPCODE_MODULO && TOY_VALUE_IS_FLOAT(right)) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't modulo by a float, exiting\n" TOY_CC_RESET);
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't modulo by a float, exiting\n" TOY_CC_RESET); //TODO: swap these with Toy_error so the repl doens't exit
 		exit(-1);
 	}
 
@@ -260,25 +272,13 @@ static void processArithmetic(Toy_VM* vm, Toy_OpcodeType opcode) {
 	}
 }
 
-static void processDuplicate(Toy_VM* vm) {
-	Toy_Value value = Toy_copyValue(Toy_peekStack(&vm->stack));
-	Toy_pushStack(&vm->stack, value);
-	Toy_freeValue(value);
-
-	//check for compound assignments
-	Toy_OpcodeType squeezed = READ_BYTE(vm);
-	if (squeezed == TOY_OPCODE_ACCESS) {
-		processAccess(vm);
-	}
-}
-
 static void processComparison(Toy_VM* vm, Toy_OpcodeType opcode) {
 	Toy_Value right = Toy_popStack(&vm->stack);
 	Toy_Value left = Toy_popStack(&vm->stack);
 
 	//most things can be equal, so handle it separately
 	if (opcode == TOY_OPCODE_COMPARE_EQUAL) {
-		bool equal = TOY_VALUES_ARE_EQUAL(left, right);
+		bool equal = Toy_checkValuesAreEqual(left, right);
 
 		//equality has an optional "negate" opcode within it's word
 		if (READ_BYTE(vm) != TOY_OPCODE_NEGATE) {
@@ -291,31 +291,31 @@ static void processComparison(Toy_VM* vm, Toy_OpcodeType opcode) {
 		return;
 	}
 
-	//coerce ints into floats if needed
-	if (TOY_VALUE_IS_INTEGER(left) && TOY_VALUE_IS_FLOAT(right)) {
-		left = TOY_VALUE_FROM_FLOAT( (float)TOY_VALUE_AS_INTEGER(left) );
-	}
-	else
-	if (TOY_VALUE_IS_FLOAT(left) && TOY_VALUE_IS_INTEGER(right)) {
-		right = TOY_VALUE_FROM_FLOAT( (float)TOY_VALUE_AS_INTEGER(right) );
+	if (Toy_checkValuesAreComparable(left, right) == false) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't compare value types %d and %d\n" TOY_CC_RESET, left.type, right.type); //TODO: typeToCString for error messages
+		exit(-1);
 	}
 
-	//other opcodes
-	if (opcode == TOY_OPCODE_COMPARE_LESS) {
-		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_BOOLEAN(TOY_VALUE_IS_FLOAT(left) ? TOY_VALUE_AS_FLOAT(left) < TOY_VALUE_AS_FLOAT(right) : TOY_VALUE_AS_INTEGER(left) < TOY_VALUE_AS_INTEGER(right)) );
+	//get the comparison
+	int comparison = Toy_compareValues(left, right);
+
+	//push the result of the comparison as a boolean, based on the opcode
+	if (opcode == TOY_OPCODE_COMPARE_LESS && comparison < 0) {
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_BOOLEAN(true));
 	}
-	else if (opcode == TOY_OPCODE_COMPARE_LESS_EQUAL) {
-		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_BOOLEAN(TOY_VALUE_IS_FLOAT(left) ? TOY_VALUE_AS_FLOAT(left) <= TOY_VALUE_AS_FLOAT(right) : TOY_VALUE_AS_INTEGER(left) <= TOY_VALUE_AS_INTEGER(right)) );
+	else if (opcode == TOY_OPCODE_COMPARE_LESS_EQUAL && (comparison < 0 || comparison == 0)) {
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_BOOLEAN(true));
 	}
-	else if (opcode == TOY_OPCODE_COMPARE_GREATER) {
-		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_BOOLEAN(TOY_VALUE_IS_FLOAT(left) ? TOY_VALUE_AS_FLOAT(left) > TOY_VALUE_AS_FLOAT(right) : TOY_VALUE_AS_INTEGER(left) > TOY_VALUE_AS_INTEGER(right)) );
+	else if (opcode == TOY_OPCODE_COMPARE_GREATER && comparison > 0) {
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_BOOLEAN(true));
 	}
-	else if (opcode == TOY_OPCODE_COMPARE_GREATER_EQUAL) {
-		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_BOOLEAN(TOY_VALUE_IS_FLOAT(left) ? TOY_VALUE_AS_FLOAT(left) >= TOY_VALUE_AS_FLOAT(right) : TOY_VALUE_AS_INTEGER(left) >= TOY_VALUE_AS_INTEGER(right)) );
+	else if (opcode == TOY_OPCODE_COMPARE_GREATER_EQUAL && (comparison > 0 || comparison == 0)) {
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_BOOLEAN(true));
 	}
+
+	//if all else failed, then it's not true
 	else {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Invalid opcode %d passed to processComparison, exiting\n" TOY_CC_RESET, opcode);
-		exit(-1);
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_BOOLEAN(false));
 	}
 }
 
@@ -324,23 +324,23 @@ static void processLogical(Toy_VM* vm, Toy_OpcodeType opcode) {
 		Toy_Value right = Toy_popStack(&vm->stack);
 		Toy_Value left = Toy_popStack(&vm->stack);
 
-		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_BOOLEAN( TOY_VALUE_IS_TRUTHY(left) && TOY_VALUE_IS_TRUTHY(right) ));
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_BOOLEAN( Toy_checkValueIsTruthy(left) && Toy_checkValueIsTruthy(right) ));
 	}
 	else if (opcode == TOY_OPCODE_OR) {
 		Toy_Value right = Toy_popStack(&vm->stack);
 		Toy_Value left = Toy_popStack(&vm->stack);
 
-		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_BOOLEAN( TOY_VALUE_IS_TRUTHY(left) || TOY_VALUE_IS_TRUTHY(right) ));
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_BOOLEAN( Toy_checkValueIsTruthy(left) || Toy_checkValueIsTruthy(right) ));
 	}
 	else if (opcode == TOY_OPCODE_TRUTHY) {
 		Toy_Value top = Toy_popStack(&vm->stack);
 
-		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_BOOLEAN( TOY_VALUE_IS_TRUTHY(top) ));
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_BOOLEAN( Toy_checkValueIsTruthy(top) ));
 	}
 	else if (opcode == TOY_OPCODE_NEGATE) {
-		Toy_Value top = Toy_popStack(&vm->stack);
+		Toy_Value top = Toy_popStack(&vm->stack); //bad values are filtered by the parser
 
-		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_BOOLEAN( !TOY_VALUE_IS_TRUTHY(top) ));
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_BOOLEAN( !Toy_checkValueIsTruthy(top) ));
 	}
 	else {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: Invalid opcode %d passed to processLogical, exiting\n" TOY_CC_RESET, opcode);
@@ -410,12 +410,7 @@ static void processConcat(Toy_VM* vm) {
 	Toy_Value right = Toy_popStack(&vm->stack);
 	Toy_Value left = Toy_popStack(&vm->stack);
 
-	if (!TOY_VALUE_IS_STRING(left)) {
-		Toy_error("Failed to concatenate a value that is not a string");
-		return;
-	}
-
-	if (!TOY_VALUE_IS_STRING(left)) {
+	if (!TOY_VALUE_IS_STRING(left) || !TOY_VALUE_IS_STRING(right)) {
 		Toy_error("Failed to concatenate a value that is not a string");
 		return;
 	}

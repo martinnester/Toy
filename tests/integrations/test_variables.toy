@@ -17,3 +17,39 @@ answer *= 9;
 answer /= 2;
 answer %= 10;
 
+//equality checks
+print 1 == 1; //true
+print 1 != 1; //false
+
+//comparison checks
+print 1 < 2; //true
+
+print "foo" > "bar"; //true
+
+print 1 < 2; //true
+print 1 > 2; //false
+
+print 2 <= 2; //true
+print 2 >= 2; //true
+
+print 1 <= 2; //true
+print 1 >= 2; //false
+
+//logical checks
+print true && true; //true
+print true && false; //false
+print false && true; //false
+print false && false; //false
+
+print true || true; //true
+print true || false; //true
+print false || true; //true
+print false || false; //false
+
+print !true; //false
+print !false; //true
+
+//precedence
+print true && false || true; //TODO: a warning is needed for this
+
+//TODO: type casting
