@@ -16,7 +16,7 @@ int test_value_creation() {
 		if (sizeof(Toy_Value) != 8)
 #endif
 		{
-			fprintf(stderr, TOY_CC_ERROR "ERROR: 'Toy_Value' is an unexpected size in memory, expected %d found %d\n" TOY_CC_RESET, TOY_BITNESS, sizeof(Toy_Value));
+			fprintf(stderr, TOY_CC_ERROR "ERROR: 'Toy_Value' is an unexpected size in memory, expected %d found %d\n" TOY_CC_RESET, TOY_BITNESS, (int)sizeof(Toy_Value));
 			return -1;
 		}
 	}
