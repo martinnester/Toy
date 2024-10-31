@@ -29,8 +29,13 @@ print 6 * 7;
 //strings can be concatenated with the .. operator
 print "Hello" .. "world!";
 
-//declare a variable
+//variables are declared easily
 var foobar = 42;
+
+//scopes allow for shadowing and rebinding
+{
+    var foobar = foobar * 7;
+}
 
 //more examples to be added as the features are implemented
 ```
@@ -45,7 +50,7 @@ To build and run the standard available tests, run `make tests`.
 
 # Tools
 
-*Coming Soon, see #126 for details.*
+*Coming Soon, see [#126](https://github.com/Ratstail91/Toy/discussions/126) for details.*
 
 # License
 
