@@ -570,7 +570,14 @@ static void parsePrecedence(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_A
 	ParsingRule prefix = getParsingRule(parser->previous.type)->prefix;
 
 	if (prefix == NULL) {
-		printError(parser, parser->previous, "Expected expression");
+		//make a nice error message
+		if (Toy_private_findKeywordByType(parser->previous.type)) {
+			printError(parser, parser->previous, "Found reserved keyword instead");
+		}
+		else {
+			printError(parser, parser->previous, "Expected expression");
+		}
+
 		Toy_private_emitAstError(bucketHandle, rootHandle);
 		return;
 	}
@@ -780,8 +787,8 @@ Toy_Ast* Toy_scanParser(Toy_Bucket** bucketHandle, Toy_Parser* parser) {
 void Toy_resetParser(Toy_Parser* parser) {
 	parser->lexer = NULL;
 
-	parser->current = TOY_BLANK_TOKEN();
-	parser->previous = TOY_BLANK_TOKEN();
+	parser->current = ((Toy_Token){TOY_TOKEN_NULL, 0, 0, NULL});
+	parser->previous = ((Toy_Token){TOY_TOKEN_NULL, 0, 0, NULL});
 
 	parser->error = false;
 	parser->panic = false;
