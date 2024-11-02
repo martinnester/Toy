@@ -46,7 +46,8 @@ static void probeAndInsert(Toy_Table** tableHandle, Toy_Value key, Toy_Value val
 		}
 
 		//adjust and continue
-		probe = (probe + 1) % (*tableHandle)->capacity;
+		probe++;
+		probe &= (*tableHandle)->capacity - 1; //DOOM hack
 		entry.psl++;
 	}
 }
@@ -133,7 +134,8 @@ Toy_Value Toy_lookupTable(Toy_Table** tableHandle, Toy_Value key) {
 		}
 
 		//adjust and continue
-		probe = (probe + 1) % (*tableHandle)->capacity;
+		probe++;
+		probe &= (*tableHandle)->capacity - 1; //DOOM hack
 	}
 }
 
@@ -158,13 +160,15 @@ void Toy_removeTable(Toy_Table** tableHandle, Toy_Value key) {
 		}
 
 		//adjust and continue
-		probe = (probe + 1) % (*tableHandle)->capacity;
+		probe++;
+		probe &= (*tableHandle)->capacity - 1; //DOOM hack
 	}
 
 	//shift along the later entries
 	for (unsigned int i = (*tableHandle)->minPsl; i < (*tableHandle)->maxPsl; i++) {
-		unsigned int p = (probe + i + 0) % (*tableHandle)->capacity; //prev
-		unsigned int u = (probe + i + 1) % (*tableHandle)->capacity; //current
+		//DOOM hack used twice
+		unsigned int p = (probe + i + 0) & ((*tableHandle)->capacity-1); //prev
+		unsigned int u = (probe + i + 1) & ((*tableHandle)->capacity-1); //current
 
 		(*tableHandle)->data[p] = (*tableHandle)->data[u];
 		(*tableHandle)->data[p].psl--;

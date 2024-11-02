@@ -9,7 +9,6 @@ export TOY_SOURCEDIR=source
 export TOY_REPLDIR=repl
 export TOY_CASESDIR=tests/cases
 export TOY_INTEGRATIONSDIR=tests/integrations
-export TOY_BENCHMARKSDIR=tests/benchmarks
 export TOY_OUTDIR=out
 export TOY_OBJDIR=obj
 
@@ -29,7 +28,7 @@ repl: source
 tests: clean test-cases test-integrations
 
 .PHONY: test-all
-test-all: clean test-cases test-integrations test-benchmarks
+test-all: clean test-cases test-integrations
 
 .PHONY: test-cases
 test-cases:
@@ -39,13 +38,9 @@ test-cases:
 test-integrations:
 	$(MAKE) -C $(TOY_INTEGRATIONSDIR) -k
 
-.PHONY: test-benchmarks
-test-benchmarks:
-	$(MAKE) -C $(TOY_BENCHMARKSDIR) -k
-
 #same as above, but with GDB
 .PHONY: test-gdb
-test-gdb: clean test-cases-gdb test-integrations-gdb test-benchmarks-gdb
+test-gdb: clean test-cases-gdb test-integrations-gdb
 
 .PHONY: test-cases-gdb
 test-cases-gdb:
@@ -54,10 +49,6 @@ test-cases-gdb:
 .PHONY: test-integrations-gdb
 test-integrations-gdb:
 	$(MAKE) -C $(TOY_INTEGRATIONSDIR) gdb -k
-
-.PHONY: test-benchmarks-gdb
-test-benchmarks-gdb:
-	$(MAKE) -C $(TOY_BENCHMARKSDIR) gdb -k
 
 #TODO: mustfail tests
 
