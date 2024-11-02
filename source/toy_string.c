@@ -91,11 +91,15 @@ Toy_String* Toy_createStringLength(Toy_Bucket** bucketHandle, const char* cstrin
 	return result;
 }
 
-Toy_String* Toy_createNameStringLength(Toy_Bucket** bucketHandle, const char* cname, unsigned int length, Toy_ValueType type) {
-
+Toy_String* Toy_createNameStringLength(Toy_Bucket** bucketHandle, const char* cname, unsigned int length, Toy_ValueType type, bool constant) {
 	//name strings can't be broken up
 	if (sizeof(Toy_String) + length + 1 > (*bucketHandle)->capacity) {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't partition enough space for a name string, requested %d length (%d total) but buckets have a capacity of %d\n" TOY_CC_RESET, (int)length, (int)(sizeof(Toy_String) + length + 1), (int)((*bucketHandle)->capacity));
+		exit(-1);
+	}
+
+	if (type == TOY_VALUE_NULL) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't declare a name string with type 'null'\n" TOY_CC_RESET);
 		exit(-1);
 	}
 
@@ -108,6 +112,7 @@ Toy_String* Toy_createNameStringLength(Toy_Bucket** bucketHandle, const char* cn
 	memcpy(ret->as.name.data, cname, length + 1);
 	ret->as.name.data[length] = '\0';
 	ret->as.name.type = type;
+	ret->as.name.constant = constant;
 
 	return ret;
 }
@@ -202,6 +207,15 @@ Toy_ValueType Toy_getNameStringType(Toy_String* str) {
 	}
 
 	return str->as.name.type;
+}
+
+Toy_ValueType Toy_getNameStringConstant(Toy_String* str) {
+	if (str->type != TOY_STRING_NAME) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't get the variable constness of a non-name string\n" TOY_CC_RESET);
+		exit(-1);
+	}
+
+	return str->as.name.constant;
 }
 
 char* Toy_getStringRawBuffer(Toy_String* str) {

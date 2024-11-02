@@ -74,6 +74,7 @@ static void synchronize(Toy_Parser* parser) {
 			case TOY_TOKEN_KEYWORD_RETURN:
 			case TOY_TOKEN_KEYWORD_VAR:
 			case TOY_TOKEN_KEYWORD_WHILE:
+			case TOY_TOKEN_KEYWORD_YIELD:
 				parser->error = true;
 				parser->panic = false;
 				return;
@@ -124,7 +125,6 @@ static ParsingTuple parsingRulesetTable[] = {
 	{PREC_NONE,nameString,NULL},// TOY_TOKEN_NAME,
 
 	//types
-	{PREC_NONE,NULL,NULL},// TOY_TOKEN_TYPE_TYPE,
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_TYPE_BOOLEAN,
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_TYPE_INTEGER,
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_TYPE_FLOAT,
@@ -133,6 +133,7 @@ static ParsingTuple parsingRulesetTable[] = {
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_TYPE_TABLE,
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_TYPE_FUNCTION,
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_TYPE_OPAQUE,
+	{PREC_NONE,NULL,NULL},// TOY_TOKEN_TYPE_TYPE,
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_TYPE_ANY,
 
 	//keywords and reserved words
@@ -222,8 +223,48 @@ static ParsingTuple parsingRulesetTable[] = {
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_EOF,
 };
 
+static Toy_ValueType readType(Toy_Parser* parser) {
+	advance(parser);
+
+	switch(parser->previous.type) {
+		case TOY_TOKEN_TYPE_BOOLEAN:
+			return TOY_VALUE_BOOLEAN;
+
+		case TOY_TOKEN_TYPE_INTEGER:
+			return TOY_VALUE_INTEGER;
+
+		case TOY_TOKEN_TYPE_FLOAT:
+			return TOY_VALUE_FLOAT;
+
+		case TOY_TOKEN_TYPE_STRING:
+			return TOY_VALUE_STRING;
+
+		case TOY_TOKEN_TYPE_ARRAY:
+			return TOY_VALUE_ARRAY;
+
+		case TOY_TOKEN_TYPE_TABLE:
+			return TOY_VALUE_TABLE;
+
+		case TOY_TOKEN_TYPE_FUNCTION:
+			return TOY_VALUE_FUNCTION;
+
+		case TOY_TOKEN_TYPE_OPAQUE:
+			return TOY_VALUE_OPAQUE;
+
+		case TOY_TOKEN_TYPE_TYPE:
+			return TOY_VALUE_TYPE;
+
+		case TOY_TOKEN_TYPE_ANY:
+			return TOY_VALUE_ANY;
+
+		default:
+			printError(parser, parser->previous, "Expected type identifier");
+			return TOY_VALUE_UNKNOWN;
+	}
+}
+
 static Toy_AstFlag nameString(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle) {
-	Toy_String* name = Toy_createNameStringLength(bucketHandle, parser->previous.lexeme, parser->previous.length, TOY_VALUE_UNKNOWN);
+	Toy_String* name = Toy_createNameStringLength(bucketHandle, parser->previous.lexeme, parser->previous.length, TOY_VALUE_UNKNOWN, false);
 
 	Toy_AstFlag flag = TOY_AST_FLAG_NONE;
 
@@ -558,7 +599,7 @@ static void parsePrecedence(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_A
 			return;
 		}
 		else if (flag >= 10 && flag <= 19) {
-			Toy_String* name = Toy_createNameStringLength(bucketHandle, prevToken.lexeme, prevToken.length, TOY_VALUE_UNKNOWN);
+			Toy_String* name = Toy_createNameStringLength(bucketHandle, prevToken.lexeme, prevToken.length, TOY_VALUE_UNKNOWN, false);
 			Toy_private_emitAstVariableAssignment(bucketHandle, rootHandle, name, flag, ptr);
 		}
 		else if (flag >= 20 && flag <= 29) {
@@ -605,11 +646,20 @@ static void makeVariableDeclarationStmt(Toy_Bucket** bucketHandle, Toy_Parser* p
 
 	Toy_Token nameToken = parser->previous;
 
-	//TODO: read the type specifier if present
-	// Toy_Token typeToken = TOY_BLANK_TOKEN();
+	//read the type specifier if present
+	Toy_ValueType varType = TOY_VALUE_ANY;
+	bool constant = false;
+
+	if (match(parser, TOY_TOKEN_OPERATOR_COLON)) {
+		varType = readType(parser);
+
+		if (match(parser, TOY_TOKEN_KEYWORD_CONST)) {
+			constant = true;
+		}
+	}
 
 	//build the string
-	Toy_String* nameStr = Toy_createNameStringLength(bucketHandle, nameToken.lexeme, nameToken.length, TOY_VALUE_NULL);
+	Toy_String* nameStr = Toy_createNameStringLength(bucketHandle, nameToken.lexeme, nameToken.length, varType, constant);
 
 	//if there's an assignment, read it, or default to null
 	Toy_Ast* expr = NULL;

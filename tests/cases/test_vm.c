@@ -330,7 +330,7 @@ int test_scope(Toy_Bucket** bucketHandle) {
 		Toy_runVM(&vm);
 
 		//check the final state of the stack
-		Toy_String* key = Toy_createNameStringLength(bucketHandle, "foobar", 6, TOY_VALUE_NULL);
+		Toy_String* key = Toy_createNameStringLength(bucketHandle, "foobar", 6, TOY_VALUE_ANY, false);
 
 		if (vm.stack == NULL ||
 			vm.stack->count != 0 ||
@@ -377,7 +377,7 @@ int test_scope(Toy_Bucket** bucketHandle) {
 		Toy_runVM(&vm);
 
 		//check the final state of the stack
-		Toy_String* key = Toy_createNameStringLength(bucketHandle, "foobar", 6, TOY_VALUE_NULL);
+		Toy_String* key = Toy_createNameStringLength(bucketHandle, "foobar", 6, TOY_VALUE_UNKNOWN, false);
 
 		if (vm.stack == NULL ||
 			vm.stack->count != 0 ||

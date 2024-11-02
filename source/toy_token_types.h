@@ -9,7 +9,6 @@ typedef enum Toy_TokenType {
 	TOY_TOKEN_NAME,
 
 	//types
-	TOY_TOKEN_TYPE_TYPE,
 	TOY_TOKEN_TYPE_BOOLEAN,
 	TOY_TOKEN_TYPE_INTEGER,
 	TOY_TOKEN_TYPE_FLOAT,
@@ -18,6 +17,7 @@ typedef enum Toy_TokenType {
 	TOY_TOKEN_TYPE_TABLE,
 	TOY_TOKEN_TYPE_FUNCTION,
 	TOY_TOKEN_TYPE_OPAQUE,
+	TOY_TOKEN_TYPE_TYPE,
 	TOY_TOKEN_TYPE_ANY,
 
 	//keywords and reserved words

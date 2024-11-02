@@ -30,15 +30,16 @@ typedef struct Toy_String {             //32 | 64 BITNESS
 
 		struct {
 			Toy_ValueType type;         //4  | 4
+			bool constant;               //1  | 1
 			char data[];                //-  | -
-		} name;                         //4  | 4
+		} name;                         //8  | 8
 	} as;                               //8  | 16
 } Toy_String;                           //24 | 32
 
 TOY_API Toy_String* Toy_createString(Toy_Bucket** bucketHandle, const char* cstring);
 TOY_API Toy_String* Toy_createStringLength(Toy_Bucket** bucketHandle, const char* cstring, unsigned int length);
 
-TOY_API Toy_String* Toy_createNameStringLength(Toy_Bucket** bucketHandle, const char* cname, unsigned int length, Toy_ValueType type); //for variable names
+TOY_API Toy_String* Toy_createNameStringLength(Toy_Bucket** bucketHandle, const char* cname, unsigned int length, Toy_ValueType type, bool constant); //for variable names
 
 TOY_API Toy_String* Toy_copyString(Toy_String* str);
 TOY_API Toy_String* Toy_deepCopyString(Toy_Bucket** bucketHandle, Toy_String* str);
@@ -50,6 +51,7 @@ TOY_API void Toy_freeString(Toy_String* str);
 TOY_API unsigned int Toy_getStringLength(Toy_String* str);
 TOY_API unsigned int Toy_getStringRefCount(Toy_String* str);
 TOY_API Toy_ValueType Toy_getNameStringType(Toy_String* str);
+TOY_API Toy_ValueType Toy_getNameStringConstant(Toy_String* str);
 
 TOY_API char* Toy_getStringRawBuffer(Toy_String* str); //allocates the buffer on the heap, needs to be freed
 

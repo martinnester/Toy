@@ -80,7 +80,7 @@ static void processRead(Toy_VM* vm) {
 			else if (stringType == TOY_STRING_NAME) {
 				Toy_ValueType valueType = TOY_VALUE_UNKNOWN;
 
-				value = TOY_VALUE_FROM_STRING(Toy_createNameStringLength(&vm->stringBucket, cstring, len, valueType));
+				value = TOY_VALUE_FROM_STRING(Toy_createNameStringLength(&vm->stringBucket, cstring, len, valueType, false));
 			}
 			else {
 				Toy_error("Invalid string type found");
@@ -139,7 +139,7 @@ static void processRead(Toy_VM* vm) {
 static void processDeclare(Toy_VM* vm) {
 	Toy_ValueType type = READ_BYTE(vm); //variable type
 	unsigned int len = READ_BYTE(vm); //name length
-	fixAlignment(vm); //one spare byte
+	bool constant = READ_BYTE(vm); //constness
 
 	//grab the jump
 	unsigned int jump = *(unsigned int*)(vm->routine + vm->jumpsAddr + READ_INT(vm));
@@ -148,7 +148,7 @@ static void processDeclare(Toy_VM* vm) {
 	char* cstring = (char*)(vm->routine + vm->dataAddr + jump);
 
 	//build the name string
-	Toy_String* name = Toy_createNameStringLength(&vm->stringBucket, cstring, len, type);
+	Toy_String* name = Toy_createNameStringLength(&vm->stringBucket, cstring, len, type, constant);
 
 	//get the value
 	Toy_Value value = Toy_popStack(&vm->stack);

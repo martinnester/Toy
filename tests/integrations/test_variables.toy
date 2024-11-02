@@ -52,4 +52,19 @@ print !false; //true
 //precedence
 print true && false || true; //TODO: a warning is needed for this
 
+//types
+var a: int;
+var b: int = 42;
+
+a = 69;
+b = 8891;
+
+print a;
+print b;
+
+//constants
+var c: int const = 42;
+
+print c;
+
 //TODO: type casting

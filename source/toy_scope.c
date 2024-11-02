@@ -20,7 +20,7 @@ static void decrementRefCount(Toy_Scope* scope) {
 	}
 }
 
-static Toy_Value* lookupScope(Toy_Scope* scope, Toy_String* key, unsigned int hash, bool recursive) {
+static Toy_TableEntry* lookupScope(Toy_Scope* scope, Toy_String* key, unsigned int hash, bool recursive) {
 	//terminate
 	if (scope == NULL) {
 		return NULL;
@@ -32,7 +32,7 @@ static Toy_Value* lookupScope(Toy_Scope* scope, Toy_String* key, unsigned int ha
 	while (true) {
 		//found the entry
 		if (TOY_VALUE_IS_STRING(scope->table->data[probe].key) && Toy_compareStrings(TOY_VALUE_AS_STRING(scope->table->data[probe].key), key) == 0) {
-			return &(scope->table->data[probe].value);
+			return &(scope->table->data[probe]);
 		}
 
 		//if its an empty slot (didn't find it here)
@@ -99,12 +99,28 @@ void Toy_declareScope(Toy_Scope* scope, Toy_String* key, Toy_Value value) {
 		exit(-1);
 	}
 
-	Toy_Value* valuePtr = lookupScope(scope, key, Toy_hashString(key), false);
+	Toy_TableEntry* entryPtr = lookupScope(scope, key, Toy_hashString(key), false);
 
-	if (valuePtr != NULL) {
-
+	if (entryPtr != NULL) {
 		char buffer[key->length + 256];
 		sprintf(buffer, "Can't redefine a variable: %s", key->as.name.data);
+		Toy_error(buffer);
+		return;
+	}
+
+	//type check
+	Toy_ValueType kt = Toy_getNameStringType(key);
+	if (kt != TOY_VALUE_ANY && value.type != TOY_VALUE_NULL && kt != value.type) {
+		char buffer[key->length + 256];
+		sprintf(buffer, "Incorrect value type assigned to in variable declaration '%s' (expected %d, got %d)", key->as.name.data, (int)kt, (int)value.type);
+		Toy_error(buffer);
+		return;
+	}
+
+	//constness check
+	if (Toy_getNameStringConstant(key) && value.type == TOY_VALUE_NULL) {
+		char buffer[key->length + 256];
+		sprintf(buffer, "Can't declare %s as const with value 'null'", key->as.name.data);
 		Toy_error(buffer);
 		return;
 	}
@@ -118,16 +134,33 @@ void Toy_assignScope(Toy_Scope* scope, Toy_String* key, Toy_Value value) {
 		exit(-1);
 	}
 
-	Toy_Value* valuePtr = lookupScope(scope, key, Toy_hashString(key), true);
+	Toy_TableEntry* entryPtr = lookupScope(scope, key, Toy_hashString(key), true);
 
-	if (valuePtr == NULL) {
+	if (entryPtr == NULL) {
 		char buffer[key->length + 256];
 		sprintf(buffer, "Undefined variable: %s", key->as.name.data);
 		Toy_error(buffer);
 		return;
 	}
 
-	*valuePtr = value;
+	//type check
+	Toy_ValueType kt = Toy_getNameStringType( TOY_VALUE_AS_STRING(entryPtr->key) );
+	if (kt != TOY_VALUE_ANY && value.type != TOY_VALUE_NULL && kt != value.type) {
+		char buffer[key->length + 256];
+		sprintf(buffer, "Incorrect value type assigned to in variable assignment '%s' (expected %d, got %d)", key->as.name.data, (int)kt, (int)value.type);
+		Toy_error(buffer);
+		return;
+	}
+
+	//constness check
+	if (Toy_getNameStringConstant( TOY_VALUE_AS_STRING(entryPtr->key) )) {
+		char buffer[key->length + 256];
+		sprintf(buffer, "Can't assign to const %s", key->as.name.data);
+		Toy_error(buffer);
+		return;
+	}
+
+	entryPtr->value = value;
 }
 
 Toy_Value Toy_accessScope(Toy_Scope* scope, Toy_String* key) {
@@ -136,16 +169,16 @@ Toy_Value Toy_accessScope(Toy_Scope* scope, Toy_String* key) {
 		exit(-1);
 	}
 
-	Toy_Value* valuePtr = lookupScope(scope, key, Toy_hashString(key), true);
+	Toy_TableEntry* entryPtr = lookupScope(scope, key, Toy_hashString(key), true);
 
-	if (valuePtr == NULL) {
+	if (entryPtr == NULL) {
 		char buffer[key->length + 256];
-		sprintf(buffer, "Undefined variable: %s", key->as.name.data);
+		sprintf(buffer, "Undefined variable: %s\n", key->as.name.data); //TODO: Toy_error
 		Toy_error(buffer);
 		return TOY_VALUE_FROM_NULL();
 	}
 
-	return *valuePtr;
+	return entryPtr->value;
 }
 
 bool Toy_isDeclaredScope(Toy_Scope* scope, Toy_String* key) {
@@ -154,7 +187,7 @@ bool Toy_isDeclaredScope(Toy_Scope* scope, Toy_String* key) {
 		exit(-1);
 	}
 
-	Toy_Value* valuePtr = lookupScope(scope, key, Toy_hashString(key), true);
+	Toy_TableEntry* entryPtr = lookupScope(scope, key, Toy_hashString(key), true);
 
-	return valuePtr != NULL;
+	return entryPtr != NULL;
 }

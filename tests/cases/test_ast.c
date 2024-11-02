@@ -255,7 +255,7 @@ int test_type_emission(Toy_Bucket** bucketHandle) {
 	{
 		//build the AST
 		Toy_Ast* ast = NULL;
-		Toy_String* name = Toy_createNameStringLength(bucketHandle, "foobar", 6, TOY_VALUE_NULL);
+		Toy_String* name = Toy_createNameStringLength(bucketHandle, "foobar", 6, TOY_VALUE_ANY, false);
 
 		Toy_private_emitAstVariableDeclaration(bucketHandle, &ast, name, NULL);
 
@@ -284,7 +284,7 @@ int test_type_emission(Toy_Bucket** bucketHandle) {
 		//build the AST
 		Toy_Ast* ast = NULL;
 		Toy_Ast* right = NULL;
-		Toy_String* name = Toy_createNameStringLength(bucketHandle, "foobar", 6, TOY_VALUE_INTEGER);
+		Toy_String* name = Toy_createNameStringLength(bucketHandle, "foobar", 6, TOY_VALUE_INTEGER, false);
 		Toy_private_emitAstValue(bucketHandle, &right, TOY_VALUE_FROM_INTEGER(69));
 		Toy_private_emitAstVariableAssignment(bucketHandle, &ast, name, TOY_AST_FLAG_ASSIGN, right);
 
@@ -310,7 +310,7 @@ int test_type_emission(Toy_Bucket** bucketHandle) {
 		//build the AST
 		Toy_Ast* ast = NULL;
 		Toy_Ast* right = NULL;
-		Toy_String* name = Toy_createNameStringLength(bucketHandle, "foobar", 6, TOY_VALUE_INTEGER);
+		Toy_String* name = Toy_createNameStringLength(bucketHandle, "foobar", 6, TOY_VALUE_INTEGER, false);
 		Toy_private_emitAstVariableAccess(bucketHandle, &ast, name);
 
 		//check if it worked
