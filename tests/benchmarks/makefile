@@ -14,7 +14,7 @@ else
 	@echo "LDFLAGS set failed - what platform is this?"
 endif
 
-#patch in these for compatability
+#patched in
 TOY_SOURCEDIR=source
 
 #directories
@@ -27,63 +27,53 @@ TEST_OBJDIR=obj
 
 #file names
 TEST_SOURCEFILES=$(wildcard $(TEST_SOURCEDIR)/*.c)
-TEST_CASESFILES=$(wildcard $(TEST_CASESDIR)/*.c)
+TEST_CASESFILES=$(wildcard $(TEST_CASESDIR)/bench_*.c)
 
-#utils
-UC=$(shell echo '$1' | tr '[:lower:]' '[:upper:]')
+#build the object files, compile the test cases, and run
+all: clean
+	$(MAKE) build-source
+	$(MAKE) build-cases
+	$(MAKE) build-link
+	$(MAKE) build-run
 
-#kick off
-all: $(TEST_OBJDIR) $(TEST_OUTDIR) build-files run-all
- 
-run-all:
-	for exe in $(wildcard $(TEST_OUTDIR)/*.exe) ; do \
-		i=1 ; \
-		exp=10 ; \
-		while [ $$i -le 8 ] ; do \
-			/usr/bin/time --format "%C: %U %W" $$exe $$exp ; \
-			exp=$$((exp * 10)); \
-			i=$$(( i + 1 )) ; \
-		done ; \
-	done
+all-override: clean
+	$(MAKE) TEST_SOURCEFILES='$(subst $(TEST_SOURCEDIR)/$(OVERRIDE),$(OVERRIDE),$(TEST_SOURCEFILES))' build-source-override
+	$(MAKE) build-cases
+	$(MAKE) build-link
+	$(MAKE) build-run
 
+.PHONY: build-source-override
+build-source-override: $(TEST_OUTDIR) $(TEST_OBJDIR) $(addprefix $(TEST_OBJDIR)/,$(notdir $(TEST_SOURCEFILES:.c=.o)))
+	$(CC) -c -o $(TEST_OBJDIR)/$(OVERRIDE:.c=.o) $(OVERRIDE) $(addprefix -I,$(TEST_SOURCEDIR)) $(CFLAGS) -fdata-sections -ffunction-sections
 
-#			gdb $$exe -ix gdb_init -ex=run -ex=bt --batch --return-child-result --args "$$exe" $$exp ; \
-
-#build the source files
-build-files:
-	for src in $(TEST_CASESFILES) ; do \
-		$(MAKE) SRC=$$src build-parameters ; \
-	done
-
-build-parameters:
-	initial=8 ; \
-	while [ $$initial -le 256 ] ; do \
-		expansion=2 ; \
-		while [ $$expansion -le 8 ] ; do \
-			$(MAKE) INITIAL=$$initial EXPANSION=$$expansion build-executable ; \
-			expansion=$$((expansion + 1)) ; \
-		done ; \
-		initial=$$((initial + initial)) ; \
-	done
-
-build-executable:
-	$(MAKE) UCSRC=$(call UC,$(basename $(notdir $(SRC)))) build-source
-	$(MAKE) UCSRC=$(call UC,$(basename $(notdir $(SRC)))) build-src
-	$(MAKE) UCSRC=$(call UC,$(basename $(notdir $(SRC)))) build-exe
-
+#targets for each step
 .PHONY: build-source
 build-source: $(TEST_OUTDIR) $(TEST_OBJDIR) $(addprefix $(TEST_OBJDIR)/,$(notdir $(TEST_SOURCEFILES:.c=.o)))
 
+.PHONY: build-cases
+build-cases: $(TEST_OUTDIR) $(TEST_OBJDIR) $(addprefix $(TEST_OBJDIR)/,$(notdir $(TEST_CASESFILES:.c=.o)))
+
+.PHONY: build-link
+build-link: $(TEST_OUTDIR) $(TEST_OBJDIR) $(addprefix $(TEST_OUTDIR)/,$(notdir $(TEST_CASESFILES:%.c=%.exe)))
+
+.PHONY: build-run
+build-run: $(addprefix $(TEST_OUTDIR)/,$(notdir $(TEST_CASESFILES:%.c=%.exe))) $(addprefix $(TEST_OUTDIR)/,$(notdir $(TEST_CASESFILES:%.c=%.run)))
+
+#compilation steps
 $(TEST_OBJDIR)/%.o: $(TEST_SOURCEDIR)/%.c
-		$(CC) -DTOY_$(UCSRC)_INITIAL_CAPACITY=$(INITIAL) -DTOY_$(UCSRC)_EXPANSION_RATE=$(EXPANSION) -c -o $@ $< $(addprefix -I,$(TEST_SOURCEDIR)) $(CFLAGS) -fdata-sections -ffunction-sections
+	$(CC) -c -o $@ $< $(addprefix -I,$(TEST_SOURCEDIR)) $(CFLAGS) -fdata-sections -ffunction-sections
 
-.PHONY: build-src
-build-src:
-	$(CC) -DTOY_$(UCSRC)_INITIAL_CAPACITY=$(INITIAL) -DTOY_$(UCSRC)_EXPANSION_RATE=$(EXPANSION) -c -o $(TEST_OBJDIR)/$(SRC:.c=.o) $(SRC) $(addprefix -I,$(TEST_SOURCEDIR)) $(CFLAGS) -fdata-sections -ffunction-sections
+$(TEST_OBJDIR)/%.o: $(TEST_CASESDIR)/%.c
+	$(CC) -c -o $@ $< $(addprefix -I,$(TEST_SOURCEDIR) $(TEST_CASESDIR)) $(CFLAGS) -fdata-sections -ffunction-sections
 
-.PHONY: build-exe
-build-exe:
-	$(CC) -o $(TEST_OUTDIR)/$(SRC:.c=)-$(INITIAL)-$(EXPANSION).exe $(TEST_OBJDIR)/$(SRC:.c=.o) $(addprefix $(TEST_OBJDIR)/,$(notdir $(TEST_SOURCEFILES:.c=.o))) $(CFLAGS) $(LIBS) $(LDFLAGS)
+$(TEST_OUTDIR)/%.exe: $(TEST_OBJDIR)/%.o
+	@$(CC) -o $@ $< $(addprefix $(TEST_OBJDIR)/,$(notdir $(TEST_SOURCEFILES:.c=.o))) $(CFLAGS) $(LIBS) $(LDFLAGS)
+
+.PRECIOUS: $(TEST_OUTDIR)/%.run
+$(TEST_OUTDIR)/%.run: $(TEST_OUTDIR)/%.exe
+	@/usr/bin/time --format "%C; $(OVERRIDE)\nUser System\n%U %E" $< 100000000 512
+	@/usr/bin/time --format "%C; $(OVERRIDE)\nUser System\n%U %E" $< 100000000 1024
+	@/usr/bin/time --format "%C; $(OVERRIDE)\nUser System\n%U %E" $< 100000000 4096
 
 #util targets
 $(TEST_OUTDIR):
@@ -91,4 +81,35 @@ $(TEST_OUTDIR):
 
 $(TEST_OBJDIR):
 	mkdir $(TEST_OBJDIR)
+
+#util commands
+.PHONY: clean
+clean:
+ifeq ($(shell uname),Linux)
+	find . -type f -name '*.o' -delete
+	find . -type f -name '*.a' -delete
+	find . -type f -name '*.exe' -delete
+	find . -type f -name '*.dll' -delete
+	find . -type f -name '*.lib' -delete
+	find . -type f -name '*.so' -delete
+	find . -type f -name '*.dylib' -delete
+	find . -type d -name 'out' -delete
+	find . -type d -name 'obj' -delete
+else ifeq ($(OS),Windows_NT)
+	$(RM) *.o *.a *.exe *.dll *.lib *.so *.dylib
+	$(RM) out
+	$(RM) obj
+else ifeq ($(shell uname),Darwin)
+	find . -type f -name '*.o' -delete
+	find . -type f -name '*.a' -delete
+	find . -type f -name '*.exe' -delete
+	find . -type f -name '*.dll' -delete
+	find . -type f -name '*.lib' -delete
+	find . -type f -name '*.so' -delete
+	find . -type f -name '*.dylib' -delete
+	find . -type d -name 'out' -delete
+	find . -type d -name 'obj' -delete
+else
+	@echo "Deletion failed - what platform is this?"
+endif
 

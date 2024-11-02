@@ -33,6 +33,7 @@ TOY_API Toy_Table* Toy_private_adjustTableCapacity(Toy_Table* oldTable, unsigned
 #define TOY_TABLE_INITIAL_CAPACITY 8
 #endif
 
+//NOTE: The DOOM hack needs a power of 2
 #ifndef TOY_TABLE_EXPANSION_RATE
 #define TOY_TABLE_EXPANSION_RATE 2
 #endif
