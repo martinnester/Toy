@@ -37,6 +37,9 @@ var foobar = 42;
     var foobar = foobar * 7;
 }
 
+//the types default to 'any' but can be specified if needed (same with constants)
+var immutable: string const = "Foobar";
+
 //more examples to be added as the features are implemented
 ```
 
