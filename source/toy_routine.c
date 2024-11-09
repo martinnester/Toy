@@ -280,6 +280,22 @@ static unsigned int writeInstructionCompound(Toy_Routine** rt, Toy_AstCompound a
 	}
 }
 
+static unsigned int writeInstructionAssert(Toy_Routine** rt, Toy_AstAssert ast) {
+	//the thing to print
+	writeRoutineCode(rt, ast.child);
+	writeRoutineCode(rt, ast.message);
+
+	//output the print opcode
+	EMIT_BYTE(rt, code, TOY_OPCODE_ASSERT);
+
+	//4-byte alignment
+	EMIT_BYTE(rt, code, ast.message != NULL ? 2 : 1); //arg count
+	EMIT_BYTE(rt, code,0);
+	EMIT_BYTE(rt, code,0);
+
+	return 0;
+}
+
 static unsigned int writeInstructionPrint(Toy_Routine** rt, Toy_AstPrint ast) {
 	//the thing to print
 	writeRoutineCode(rt, ast.child);
@@ -502,6 +518,10 @@ static unsigned int writeRoutineCode(Toy_Routine** rt, Toy_Ast* ast) {
 
 		case TOY_AST_COMPOUND:
 			result += writeInstructionCompound(rt, ast->compound);
+			break;
+
+		case TOY_AST_ASSERT:
+			result += writeInstructionAssert(rt, ast->assert);
 			break;
 
 		case TOY_AST_PRINT:

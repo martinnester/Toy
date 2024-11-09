@@ -195,7 +195,7 @@ static ParsingTuple parsingRulesetTable[] = {
 	//structural operators
 	{PREC_NONE,group,NULL},// TOY_TOKEN_OPERATOR_PAREN_LEFT,
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_PAREN_RIGHT,
-	{PREC_CALL,NULL,compound},// TOY_TOKEN_OPERATOR_BRACKET_LEFT,
+	{PREC_GROUP,NULL,compound},// TOY_TOKEN_OPERATOR_BRACKET_LEFT,
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_BRACKET_RIGHT,
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_BRACE_LEFT,
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_BRACE_RIGHT,
@@ -208,7 +208,7 @@ static ParsingTuple parsingRulesetTable[] = {
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_COLON,
 
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_SEMICOLON, // ;
-	{PREC_CALL,NULL,compound},// TOY_TOKEN_OPERATOR_COMMA, // ,
+	{PREC_GROUP,NULL,compound},// TOY_TOKEN_OPERATOR_COMMA, // ,
 
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_DOT, // .
 	{PREC_CALL,NULL,binary},// TOY_TOKEN_OPERATOR_CONCAT, // ..
@@ -563,11 +563,11 @@ static Toy_AstFlag compound(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_A
 	advance(parser);
 
 	if (parser->previous.type == TOY_TOKEN_OPERATOR_COMMA) {
-		parsePrecedence(bucketHandle, parser, rootHandle, PREC_ASSIGNMENT + 1);
+		parsePrecedence(bucketHandle, parser, rootHandle, PREC_GROUP);
 		return TOY_AST_FLAG_COMPOUND_COLLECTION;
 	}
 	else if (parser->previous.type == TOY_TOKEN_OPERATOR_BRACKET_LEFT) {
-		parsePrecedence(bucketHandle, parser, rootHandle, PREC_ASSIGNMENT + 1);
+		parsePrecedence(bucketHandle, parser, rootHandle, PREC_GROUP);
 		consume(parser, TOY_TOKEN_OPERATOR_BRACKET_RIGHT, "Expected ']' at the end of index expression");
 		return TOY_AST_FLAG_COMPOUND_INDEX;
 	}
@@ -655,6 +655,21 @@ static void makeExpr(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** ro
 //forward declarations
 static void makeBlockStmt(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle);
 
+static void makeAssertStmt(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle) {
+	Toy_Ast* ast = NULL; //assert's emit function is a bit different
+	makeExpr(bucketHandle, parser, &ast);
+
+	//NOTE: if it's a compound, then it's got a second arg
+	if (ast->type == TOY_AST_COMPOUND) {
+		Toy_private_emitAstAssert(bucketHandle, rootHandle, ast->compound.left, ast->compound.right);
+	}
+	else {
+		Toy_private_emitAstAssert(bucketHandle, rootHandle, ast, NULL);
+	}
+
+	consume(parser, TOY_TOKEN_OPERATOR_SEMICOLON, "Expected ';' at the end of assert statement");
+}
+
 static void makePrintStmt(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle) {
 	makeExpr(bucketHandle, parser, rootHandle);
 	Toy_private_emitAstPrint(bucketHandle, rootHandle);
@@ -715,7 +730,11 @@ static void makeStmt(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** ro
 		return;
 	}
 
-	//assert
+	else if (match(parser, TOY_TOKEN_KEYWORD_ASSERT)) {
+		makeAssertStmt(bucketHandle, parser, rootHandle);
+		return;
+	}
+
 	//if-then-else
 	//while-then
 	//for-pre-clause-post-then

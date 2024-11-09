@@ -95,6 +95,16 @@ void Toy_private_emitAstCompound(Toy_Bucket** bucketHandle, Toy_Ast** astHandle,
 	(*astHandle) = tmp;
 }
 
+void Toy_private_emitAstAssert(Toy_Bucket** bucketHandle, Toy_Ast** astHandle, Toy_Ast* child, Toy_Ast* msg) {
+	Toy_Ast* tmp = (Toy_Ast*)Toy_partitionBucket(bucketHandle, sizeof(Toy_Ast));
+
+	tmp->type = TOY_AST_ASSERT;
+	tmp->assert.child = child;
+	tmp->assert.message = msg;
+
+	(*astHandle) = tmp;
+}
+
 void Toy_private_emitAstPrint(Toy_Bucket** bucketHandle, Toy_Ast** astHandle) {
 	Toy_Ast* tmp = (Toy_Ast*)Toy_partitionBucket(bucketHandle, sizeof(Toy_Ast));
 

@@ -37,6 +37,7 @@ typedef enum Toy_OpcodeType {
 	TOY_OPCODE_SCOPE_POP,
 
 	//various action instructions
+	TOY_OPCODE_ASSERT,
 	TOY_OPCODE_PRINT,
 	TOY_OPCODE_CONCAT,
 	TOY_OPCODE_INDEX,

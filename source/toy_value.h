@@ -1,6 +1,7 @@
 #pragma once
 
 #include "toy_common.h"
+#include "toy_print.h"
 
 //forward declarations
 struct Toy_String;
@@ -67,3 +68,6 @@ TOY_API bool Toy_checkValueIsTruthy(Toy_Value value);
 TOY_API bool Toy_checkValuesAreEqual(Toy_Value left, Toy_Value right);
 TOY_API bool Toy_checkValuesAreComparable(Toy_Value left, Toy_Value right);
 TOY_API int Toy_compareValues(Toy_Value left, Toy_Value right);
+
+//convert the value to a string, then forward it to a callback
+TOY_API void Toy_stringifyValue(Toy_Value value, Toy_callbackType callback);

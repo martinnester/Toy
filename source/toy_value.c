@@ -2,7 +2,9 @@
 #include "toy_console_colors.h"
 
 #include "toy_string.h"
-#include "toy_print.h"
+
+#include <stdio.h>
+#include <stdlib.h>
 
 //utils
 static unsigned int hashUInt(unsigned int x) {
@@ -37,10 +39,10 @@ unsigned int Toy_hashValue(Toy_Value value) {
 		case TOY_VALUE_TYPE:
 		case TOY_VALUE_ANY:
 		case TOY_VALUE_UNKNOWN:
-			break;
+			fprintf(stderr, TOY_CC_ERROR "ERROR: Can't hash an unknown value type, exiting\n" TOY_CC_RESET);
+			exit(-1);
 	}
 
-	Toy_error(TOY_CC_ERROR "ERROR: Can't hash an unknown value type\n" TOY_CC_RESET);
 	return 0;
 }
 
@@ -64,11 +66,11 @@ Toy_Value Toy_copyValue(Toy_Value value) {
 		case TOY_VALUE_TYPE:
 		case TOY_VALUE_ANY:
 		case TOY_VALUE_UNKNOWN:
-			break;
+			fprintf(stderr, TOY_CC_ERROR "ERROR: Can't copy an unknown value type, exiting\n" TOY_CC_RESET);
+			exit(-1);
 	}
 
 	//dummy return
-	Toy_error(TOY_CC_ERROR "ERROR: Can't copy an unknown value type\n" TOY_CC_RESET);
 	return TOY_VALUE_FROM_NULL();
 }
 
@@ -93,14 +95,15 @@ void Toy_freeValue(Toy_Value value) {
 		case TOY_VALUE_TYPE:
 		case TOY_VALUE_ANY:
 		case TOY_VALUE_UNKNOWN:
-			Toy_error(TOY_CC_ERROR "ERROR: Can't free an unknown type\n" TOY_CC_RESET);
+			fprintf(stderr, TOY_CC_ERROR "ERROR: Can't free an unknown value type, exiting\n" TOY_CC_RESET);
+			exit(-1);
 	}
 }
 
 bool Toy_checkValueIsTruthy(Toy_Value value) {
 	//null is an error
 	if (TOY_VALUE_IS_NULL(value)) {
-		Toy_error(TOY_CC_ERROR "ERROR: 'null' is neither true nor false\n" TOY_CC_RESET);
+		Toy_error("'null' is neither true nor false");
 		return false;
 	}
 
@@ -158,10 +161,10 @@ bool Toy_checkValuesAreEqual(Toy_Value left, Toy_Value right) {
 		case TOY_VALUE_TYPE:
 		case TOY_VALUE_ANY:
 		case TOY_VALUE_UNKNOWN:
-			break;
+			fprintf(stderr, TOY_CC_ERROR "ERROR: Unknown types in value equality, exiting\n" TOY_CC_RESET);
+			exit(-1);
 	}
 
-	Toy_error(TOY_CC_ERROR "ERROR: Unknown types in value equality\n" TOY_CC_RESET);
 	return false;
 }
 
@@ -187,10 +190,10 @@ bool Toy_checkValuesAreComparable(Toy_Value left, Toy_Value right) {
 		case TOY_VALUE_TYPE:
 		case TOY_VALUE_ANY:
 		case TOY_VALUE_UNKNOWN:
-			break;
+			fprintf(stderr, TOY_CC_ERROR "Unknown types in value comparison check, exiting\n" TOY_CC_RESET);
+			exit(-1);
 	}
 
-	Toy_error(TOY_CC_ERROR "ERROR: Unknown types in value comparison check\n" TOY_CC_RESET);
 	return false;
 }
 
@@ -235,9 +238,64 @@ int Toy_compareValues(Toy_Value left, Toy_Value right) {
 		case TOY_VALUE_TYPE:
 		case TOY_VALUE_ANY:
 		case TOY_VALUE_UNKNOWN:
-			break;
+			fprintf(stderr, TOY_CC_ERROR "Unknown types in value comparison, exiting\n" TOY_CC_RESET);
+			exit(-1);
 	}
 
-	Toy_error(TOY_CC_ERROR "ERROR: Unknown types in value comparison\n" TOY_CC_RESET);
 	return -1;
+}
+
+void Toy_stringifyValue(Toy_Value value, Toy_callbackType callback) {
+	//NOTE: don't append a newline
+	switch(value.type) {
+		case TOY_VALUE_NULL:
+			callback("null");
+			break;
+
+		case TOY_VALUE_BOOLEAN:
+			callback(TOY_VALUE_AS_BOOLEAN(value) ? "true" : "false");
+			break;
+
+		case TOY_VALUE_INTEGER: {
+			char buffer[16];
+			sprintf(buffer, "%d", TOY_VALUE_AS_INTEGER(value));
+			callback(buffer);
+			break;
+		}
+
+		case TOY_VALUE_FLOAT: {
+			char buffer[16];
+			sprintf(buffer, "%f", TOY_VALUE_AS_FLOAT(value));
+			callback(buffer);
+			break;
+		}
+
+		case TOY_VALUE_STRING: {
+			Toy_String* str = TOY_VALUE_AS_STRING(value);
+
+			//TODO: decide on how long strings, etc. live for in memory
+			if (str->type == TOY_STRING_NODE) {
+				char* buffer = Toy_getStringRawBuffer(str);
+				callback(buffer);
+				free(buffer);
+			}
+			else if (str->type == TOY_STRING_LEAF) {
+				callback(str->as.leaf.data);
+			}
+			else if (str->type == TOY_STRING_NAME) {
+				callback(str->as.name.data); //should this be a thing?
+			}
+			break;
+		}
+
+		case TOY_VALUE_ARRAY:
+		case TOY_VALUE_TABLE:
+		case TOY_VALUE_FUNCTION:
+		case TOY_VALUE_OPAQUE:
+		case TOY_VALUE_TYPE:
+		case TOY_VALUE_ANY:
+		case TOY_VALUE_UNKNOWN:
+			fprintf(stderr, TOY_CC_ERROR "Unknown types in value stringify, exiting\n" TOY_CC_RESET);
+			exit(-1);
+	}
 }

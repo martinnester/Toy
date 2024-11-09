@@ -177,6 +177,7 @@ static void processAssign(Toy_VM* vm) {
 	//cleanup
 	Toy_freeValue(name);
 }
+
 static void processAccess(Toy_VM* vm) {
 	Toy_Value name = Toy_popStack(&vm->stack);
 
@@ -348,62 +349,42 @@ static void processLogical(Toy_VM* vm, Toy_OpcodeType opcode) {
 	}
 }
 
+static void processAssert(Toy_VM* vm) {
+	unsigned int count = READ_BYTE(vm);
+
+	Toy_Value value = TOY_VALUE_FROM_NULL();
+	Toy_Value message = TOY_VALUE_FROM_NULL();
+
+	//determine the args
+	if (count == 1) {
+		message = TOY_VALUE_FROM_STRING(Toy_createString(&vm->stringBucket, "assertion failed"));
+		value = Toy_popStack(&vm->stack);
+	}
+	else if (count == 2) {
+		message = Toy_popStack(&vm->stack);
+		value = Toy_popStack(&vm->stack);
+	}
+	else {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Invalid assert argument count %d found, exiting\n" TOY_CC_RESET, (int)count);
+		exit(-1);
+	}
+
+	//do the check
+	if (TOY_VALUE_IS_NULL(value) || Toy_checkValueIsTruthy(value) == false) {
+		//on a failure, print the message
+		Toy_stringifyValue(message, Toy_error);
+	}
+
+	//cleanup
+	Toy_freeValue(value);
+	Toy_freeValue(message);
+}
+
 static void processPrint(Toy_VM* vm) {
 	//print the value on top of the stack, popping it
 	Toy_Value value = Toy_popStack(&vm->stack);
-
-	//NOTE: don't append a newline - leave that choice to the host
-	switch(value.type) {
-		case TOY_VALUE_NULL:
-			Toy_print("null");
-			break;
-
-		case TOY_VALUE_BOOLEAN:
-			Toy_print(TOY_VALUE_AS_BOOLEAN(value) ? "true" : "false");
-			break;
-
-		case TOY_VALUE_INTEGER: {
-			char buffer[16];
-			sprintf(buffer, "%d", TOY_VALUE_AS_INTEGER(value));
-			Toy_print(buffer);
-			break;
-		}
-
-		case TOY_VALUE_FLOAT: {
-			char buffer[16];
-			sprintf(buffer, "%f", TOY_VALUE_AS_FLOAT(value));
-			Toy_print(buffer);
-			break;
-		}
-
-		case TOY_VALUE_STRING: {
-			Toy_String* str = TOY_VALUE_AS_STRING(value);
-
-			//TODO: decide on how long strings, etc. live for in memory
-			if (str->type == TOY_STRING_NODE) {
-				char* buffer = Toy_getStringRawBuffer(str);
-				Toy_print(buffer);
-				free(buffer);
-			}
-			else if (str->type == TOY_STRING_LEAF) {
-				Toy_print(str->as.leaf.data);
-			}
-			else if (str->type == TOY_STRING_NAME) {
-				Toy_print(str->as.name.data); //should this be a thing?
-			}
-			break;
-		}
-
-		case TOY_VALUE_ARRAY:
-		case TOY_VALUE_TABLE:
-		case TOY_VALUE_FUNCTION:
-		case TOY_VALUE_OPAQUE:
-		case TOY_VALUE_TYPE:
-		case TOY_VALUE_ANY:
-		case TOY_VALUE_UNKNOWN:
-			fprintf(stderr, TOY_CC_ERROR "ERROR: Unknown value type %d passed to processPrint, exiting\n" TOY_CC_RESET, value.type);
-			exit(-1);
-	}
+	Toy_stringifyValue(value, Toy_print);
+	Toy_freeValue(value);
 }
 
 static void processConcat(Toy_VM* vm) {
@@ -447,11 +428,17 @@ static void processIndex(Toy_VM* vm) {
 		//type checks
 		if (!TOY_VALUE_IS_INTEGER(index)) {
 			Toy_error("Failed to index a string");
+			Toy_freeValue(value);
+			Toy_freeValue(index);
+			Toy_freeValue(length);
 			return;
 		}
 
 		if (!(TOY_VALUE_IS_NULL(length) || TOY_VALUE_IS_INTEGER(length))) {
 			Toy_error("Failed to index-length a string");
+			Toy_freeValue(value);
+			Toy_freeValue(index);
+			Toy_freeValue(length);
 			return;
 		}
 
@@ -486,6 +473,10 @@ static void processIndex(Toy_VM* vm) {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: Unknown value type %d found in processIndex, exiting\n" TOY_CC_RESET, value.type);
 		exit(-1);
 	}
+
+	Toy_freeValue(value);
+	Toy_freeValue(index);
+	Toy_freeValue(length);
 }
 
 static void process(Toy_VM* vm) {
@@ -554,6 +545,10 @@ static void process(Toy_VM* vm) {
 				break;
 
 			//various action instructions
+			case TOY_OPCODE_ASSERT:
+				processAssert(vm);
+				break;
+
 			case TOY_OPCODE_PRINT:
 				processPrint(vm);
 				break;
