@@ -372,7 +372,7 @@ static void processAssert(Toy_VM* vm) {
 	//do the check
 	if (TOY_VALUE_IS_NULL(value) || Toy_checkValueIsTruthy(value) == false) {
 		//on a failure, print the message
-		Toy_stringifyValue(message, Toy_error);
+		Toy_stringifyValue(message, Toy_assertFailure);
 	}
 
 	//cleanup
