@@ -84,6 +84,17 @@ void Toy_private_emitAstGroup(Toy_Bucket** bucketHandle, Toy_Ast** astHandle) {
 	(*astHandle) = tmp;
 }
 
+void Toy_private_emitAstCompound(Toy_Bucket** bucketHandle, Toy_Ast** astHandle, Toy_AstFlag flag, Toy_Ast* right) {
+	Toy_Ast* tmp = (Toy_Ast*)Toy_partitionBucket(bucketHandle, sizeof(Toy_Ast));
+
+	tmp->type = TOY_AST_COMPOUND;
+	tmp->compound.flag = flag;
+	tmp->compound.left = *astHandle; //left-recursive
+	tmp->compound.right = right;
+
+	(*astHandle) = tmp;
+}
+
 void Toy_private_emitAstPrint(Toy_Bucket** bucketHandle, Toy_Ast** astHandle) {
 	Toy_Ast* tmp = (Toy_Ast*)Toy_partitionBucket(bucketHandle, sizeof(Toy_Ast));
 

@@ -58,7 +58,7 @@ static void emitToJumpTable(Toy_Routine** rt, unsigned int startAddr) {
 	EMIT_INT(rt, jumps, startAddr); //save address at the jump index
 }
 
-static void emitString(Toy_Routine** rt, Toy_String* str) {
+static unsigned int emitString(Toy_Routine** rt, Toy_String* str) {
 	//4-byte alignment
 	unsigned int length = str->length + 1;
 	if (length % 4 != 0) {
@@ -87,11 +87,13 @@ static void emitString(Toy_Routine** rt, Toy_String* str) {
 
 	//mark the jump position
 	emitToJumpTable(rt, startAddr);
+
+	return 1;
 }
 
-static void writeRoutineCode(Toy_Routine** rt, Toy_Ast* ast); //forward declare for recursion
+static unsigned int writeRoutineCode(Toy_Routine** rt, Toy_Ast* ast); //forward declare for recursion
 
-static void writeInstructionValue(Toy_Routine** rt, Toy_AstValue ast) {
+static unsigned int writeInstructionValue(Toy_Routine** rt, Toy_AstValue ast) {
 	EMIT_BYTE(rt, code, TOY_OPCODE_READ);
 	EMIT_BYTE(rt, code, ast.value.type);
 
@@ -128,17 +130,19 @@ static void writeInstructionValue(Toy_Routine** rt, Toy_AstValue ast) {
 		EMIT_BYTE(rt, code, TOY_STRING_LEAF); //normal string
 		EMIT_BYTE(rt, code, 0); //can't store the length
 
-		emitString(rt, TOY_VALUE_AS_STRING(ast.value));
+		return emitString(rt, TOY_VALUE_AS_STRING(ast.value));
 	}
 	else {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: Invalid AST type found: Unknown value type\n" TOY_CC_RESET);
 		exit(-1);
 	}
+
+	return 1;
 }
 
-static void writeInstructionUnary(Toy_Routine** rt, Toy_AstUnary ast) {
+static unsigned int writeInstructionUnary(Toy_Routine** rt, Toy_AstUnary ast) {
 	//working with a stack means the child gets placed first
-	writeRoutineCode(rt, ast.child);
+	unsigned int result = writeRoutineCode(rt, ast.child);
 
 	if (ast.flag == TOY_AST_FLAG_NEGATE) {
 		EMIT_BYTE(rt, code, TOY_OPCODE_NEGATE);
@@ -152,9 +156,11 @@ static void writeInstructionUnary(Toy_Routine** rt, Toy_AstUnary ast) {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: Invalid AST unary flag found\n" TOY_CC_RESET);
 		exit(-1);
 	}
+
+	return result;
 }
 
-static void writeInstructionBinary(Toy_Routine** rt, Toy_AstBinary ast) {
+static unsigned int writeInstructionBinary(Toy_Routine** rt, Toy_AstBinary ast) {
 	//left, then right, then the binary's operation
 	writeRoutineCode(rt, ast.left);
 	writeRoutineCode(rt, ast.right);
@@ -194,9 +200,11 @@ static void writeInstructionBinary(Toy_Routine** rt, Toy_AstBinary ast) {
 	EMIT_BYTE(rt, code,TOY_OPCODE_PASS); //checked in compound assignments
 	EMIT_BYTE(rt, code,0);
 	EMIT_BYTE(rt, code,0);
+
+	return 1; //leaves only 1 value on the stack
 }
 
-static void writeInstructionCompare(Toy_Routine** rt, Toy_AstCompare ast) {
+static unsigned int writeInstructionCompare(Toy_Routine** rt, Toy_AstCompare ast) {
 	//left, then right, then the compare's operation
 	writeRoutineCode(rt, ast.left);
 	writeRoutineCode(rt, ast.right);
@@ -210,7 +218,7 @@ static void writeInstructionCompare(Toy_Routine** rt, Toy_AstCompare ast) {
 		EMIT_BYTE(rt, code,0);
 		EMIT_BYTE(rt, code,0);
 
-		return;
+		return 1;
 	}
 	else if (ast.flag == TOY_AST_FLAG_COMPARE_LESS) {
 		EMIT_BYTE(rt, code,TOY_OPCODE_COMPARE_LESS);
@@ -234,13 +242,45 @@ static void writeInstructionCompare(Toy_Routine** rt, Toy_AstCompare ast) {
 	EMIT_BYTE(rt, code,0);
 	EMIT_BYTE(rt, code,0);
 	EMIT_BYTE(rt, code,0);
+
+	return 1; //leaves only 1 value on the stack
 }
 
-static void writeInstructionGroup(Toy_Routine** rt, Toy_AstGroup ast) {
-	writeRoutineCode(rt, ast.child);
+static unsigned int writeInstructionGroup(Toy_Routine** rt, Toy_AstGroup ast) {
+	//not certain what this leaves
+	return writeRoutineCode(rt, ast.child);
 }
 
-static void writeInstructionPrint(Toy_Routine** rt, Toy_AstPrint ast) {
+static unsigned int writeInstructionCompound(Toy_Routine** rt, Toy_AstCompound ast) {
+	unsigned int result = 0;
+
+	//left, then right
+	result += writeRoutineCode(rt, ast.left);
+	result += writeRoutineCode(rt, ast.right);
+
+	if (ast.flag == TOY_AST_FLAG_COMPOUND_COLLECTION) {
+		//collections are handled above
+		return result;
+	}
+	else if (ast.flag == TOY_AST_FLAG_COMPOUND_INDEX) {
+		//value[index, length]
+		EMIT_BYTE(rt, code, TOY_OPCODE_INDEX);
+		EMIT_BYTE(rt, code, result);
+
+		//4-byte alignment
+		EMIT_BYTE(rt, code,0);
+		EMIT_BYTE(rt, code,0);
+
+		return 1; //leaves only 1 value on the stack
+	}
+	else {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Invalid AST compound flag found\n" TOY_CC_RESET);
+		exit(-1);
+		return 0;
+	}
+}
+
+static unsigned int writeInstructionPrint(Toy_Routine** rt, Toy_AstPrint ast) {
 	//the thing to print
 	writeRoutineCode(rt, ast.child);
 
@@ -251,9 +291,11 @@ static void writeInstructionPrint(Toy_Routine** rt, Toy_AstPrint ast) {
 	EMIT_BYTE(rt, code,0);
 	EMIT_BYTE(rt, code,0);
 	EMIT_BYTE(rt, code,0);
+
+	return 0;
 }
 
-static void writeInstructionVarDeclare(Toy_Routine** rt, Toy_AstVarDeclare ast) {
+static unsigned int writeInstructionVarDeclare(Toy_Routine** rt, Toy_AstVarDeclare ast) {
 	//initial value
 	writeRoutineCode(rt, ast.expr);
 
@@ -264,9 +306,13 @@ static void writeInstructionVarDeclare(Toy_Routine** rt, Toy_AstVarDeclare ast) 
 	EMIT_BYTE(rt, code, Toy_getNameStringConstant(ast.name) ? 1 : 0); //check for constness
 
 	emitString(rt, ast.name);
+
+	return 0;
 }
 
-static void writeInstructionAssign(Toy_Routine** rt, Toy_AstVarAssign ast) {
+static unsigned int writeInstructionAssign(Toy_Routine** rt, Toy_AstVarAssign ast) {
+	unsigned int result = 0;
+
 	//name, duplicate, right, opcode
 	if (ast.flag == TOY_AST_FLAG_ASSIGN) {
 		EMIT_BYTE(rt, code, TOY_OPCODE_READ);
@@ -275,7 +321,7 @@ static void writeInstructionAssign(Toy_Routine** rt, Toy_AstVarAssign ast) {
 		EMIT_BYTE(rt, code, ast.name->length); //store the length (max 255)
 
 		emitString(rt, ast.name);
-		writeRoutineCode(rt, ast.expr);
+		result += writeRoutineCode(rt, ast.expr);
 
 		EMIT_BYTE(rt, code, TOY_OPCODE_ASSIGN);
 		EMIT_BYTE(rt, code, 0);
@@ -293,7 +339,7 @@ static void writeInstructionAssign(Toy_Routine** rt, Toy_AstVarAssign ast) {
 		EMIT_BYTE(rt, code,0);
 		EMIT_BYTE(rt, code,0);
 
-		writeRoutineCode(rt, ast.expr);
+		result += writeRoutineCode(rt, ast.expr);
 
 		EMIT_BYTE(rt, code,TOY_OPCODE_ADD);
 		EMIT_BYTE(rt, code,TOY_OPCODE_ASSIGN); //squeezed
@@ -311,7 +357,7 @@ static void writeInstructionAssign(Toy_Routine** rt, Toy_AstVarAssign ast) {
 		EMIT_BYTE(rt, code,0);
 		EMIT_BYTE(rt, code,0);
 
-		writeRoutineCode(rt, ast.expr);
+		result += writeRoutineCode(rt, ast.expr);
 
 		EMIT_BYTE(rt, code,TOY_OPCODE_SUBTRACT);
 		EMIT_BYTE(rt, code,TOY_OPCODE_ASSIGN); //squeezed
@@ -329,7 +375,7 @@ static void writeInstructionAssign(Toy_Routine** rt, Toy_AstVarAssign ast) {
 		EMIT_BYTE(rt, code,0);
 		EMIT_BYTE(rt, code,0);
 
-		writeRoutineCode(rt, ast.expr);
+		result += writeRoutineCode(rt, ast.expr);
 
 		EMIT_BYTE(rt, code,TOY_OPCODE_MULTIPLY);
 		EMIT_BYTE(rt, code,TOY_OPCODE_ASSIGN); //squeezed
@@ -347,7 +393,7 @@ static void writeInstructionAssign(Toy_Routine** rt, Toy_AstVarAssign ast) {
 		EMIT_BYTE(rt, code,0);
 		EMIT_BYTE(rt, code,0);
 
-		writeRoutineCode(rt, ast.expr);
+		result += writeRoutineCode(rt, ast.expr);
 
 		EMIT_BYTE(rt, code,TOY_OPCODE_DIVIDE);
 		EMIT_BYTE(rt, code,TOY_OPCODE_ASSIGN); //squeezed
@@ -365,7 +411,7 @@ static void writeInstructionAssign(Toy_Routine** rt, Toy_AstVarAssign ast) {
 		EMIT_BYTE(rt, code,0);
 		EMIT_BYTE(rt, code,0);
 
-		writeRoutineCode(rt, ast.expr);
+		result += writeRoutineCode(rt, ast.expr);
 
 		EMIT_BYTE(rt, code,TOY_OPCODE_MODULO);
 		EMIT_BYTE(rt, code,TOY_OPCODE_ASSIGN); //squeezed
@@ -379,9 +425,11 @@ static void writeInstructionAssign(Toy_Routine** rt, Toy_AstVarAssign ast) {
 	//4-byte alignment
 	EMIT_BYTE(rt, code,0);
 	EMIT_BYTE(rt, code,0);
+
+	return result;
 }
 
-static void writeInstructionAccess(Toy_Routine** rt, Toy_AstVarAccess ast) {
+static unsigned int writeInstructionAccess(Toy_Routine** rt, Toy_AstVarAccess ast) {
 	//push the name
 	EMIT_BYTE(rt, code, TOY_OPCODE_READ);
 	EMIT_BYTE(rt, code, TOY_VALUE_STRING);
@@ -395,6 +443,8 @@ static void writeInstructionAccess(Toy_Routine** rt, Toy_AstVarAccess ast) {
 	EMIT_BYTE(rt, code,0);
 	EMIT_BYTE(rt, code,0);
 	EMIT_BYTE(rt, code,0);
+
+	return 1;
 }
 
 //routine structure
@@ -402,10 +452,12 @@ static void writeInstructionAccess(Toy_Routine** rt, Toy_AstVarAccess ast) {
 // 	//
 // }
 
-static void writeRoutineCode(Toy_Routine** rt, Toy_Ast* ast) {
+static unsigned int writeRoutineCode(Toy_Routine** rt, Toy_Ast* ast) {
 	if (ast == NULL) {
-		return;
+		return 0;
 	}
+
+	unsigned int result = 0;
 
 	//determine how to write each instruction based on the Ast
 	switch(ast->type) {
@@ -417,8 +469,8 @@ static void writeRoutineCode(Toy_Routine** rt, Toy_Ast* ast) {
 				EMIT_BYTE(rt, code, 0);
 			}
 
-			writeRoutineCode(rt, ast->block.child);
-			writeRoutineCode(rt, ast->block.next);
+			result += writeRoutineCode(rt, ast->block.child);
+			result += writeRoutineCode(rt, ast->block.next);
 
 			if (ast->block.innerScope) {
 				EMIT_BYTE(rt, code, TOY_OPCODE_SCOPE_POP);
@@ -429,39 +481,43 @@ static void writeRoutineCode(Toy_Routine** rt, Toy_Ast* ast) {
 			break;
 
 		case TOY_AST_VALUE:
-			writeInstructionValue(rt, ast->value);
+			result += writeInstructionValue(rt, ast->value);
 			break;
 
 		case TOY_AST_UNARY:
-			writeInstructionUnary(rt, ast->unary);
+			result += writeInstructionUnary(rt, ast->unary);
 			break;
 
 		case TOY_AST_BINARY:
-			writeInstructionBinary(rt, ast->binary);
+			result += writeInstructionBinary(rt, ast->binary);
 			break;
 
 		case TOY_AST_COMPARE:
-			writeInstructionCompare(rt, ast->compare);
+			result += writeInstructionCompare(rt, ast->compare);
 			break;
 
 		case TOY_AST_GROUP:
-			writeInstructionGroup(rt, ast->group);
+			result += writeInstructionGroup(rt, ast->group);
+			break;
+
+		case TOY_AST_COMPOUND:
+			result += writeInstructionCompound(rt, ast->compound);
 			break;
 
 		case TOY_AST_PRINT:
-			writeInstructionPrint(rt, ast->print);
+			result += writeInstructionPrint(rt, ast->print);
 			break;
 
 		case TOY_AST_VAR_DECLARE:
-			writeInstructionVarDeclare(rt, ast->varDeclare);
+			result += writeInstructionVarDeclare(rt, ast->varDeclare);
 			break;
 
 		case TOY_AST_VAR_ASSIGN:
-			writeInstructionAssign(rt, ast->varAssign);
+			result += writeInstructionAssign(rt, ast->varAssign);
 			break;
 
 		case TOY_AST_VAR_ACCESS:
-			writeInstructionAccess(rt, ast->varAccess);
+			result += writeInstructionAccess(rt, ast->varAccess);
 			break;
 
 		//meta instructions are disallowed
@@ -481,6 +537,8 @@ static void writeRoutineCode(Toy_Routine** rt, Toy_Ast* ast) {
 			exit(-1);
 			break;
 	}
+
+	return result;
 }
 
 static void* writeRoutine(Toy_Routine* rt, Toy_Ast* ast) {

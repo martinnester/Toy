@@ -116,6 +116,7 @@ static Toy_AstFlag literal(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_As
 static Toy_AstFlag unary(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle);
 static Toy_AstFlag binary(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle);
 static Toy_AstFlag group(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle);
+static Toy_AstFlag compound(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle);
 
 //precedence definitions
 static ParsingTuple parsingRulesetTable[] = {
@@ -194,7 +195,7 @@ static ParsingTuple parsingRulesetTable[] = {
 	//structural operators
 	{PREC_NONE,group,NULL},// TOY_TOKEN_OPERATOR_PAREN_LEFT,
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_PAREN_RIGHT,
-	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_BRACKET_LEFT,
+	{PREC_CALL,NULL,compound},// TOY_TOKEN_OPERATOR_BRACKET_LEFT,
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_BRACKET_RIGHT,
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_BRACE_LEFT,
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_BRACE_RIGHT,
@@ -207,7 +208,7 @@ static ParsingTuple parsingRulesetTable[] = {
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_COLON,
 
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_SEMICOLON, // ;
-	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_COMMA, // ,
+	{PREC_CALL,NULL,compound},// TOY_TOKEN_OPERATOR_COMMA, // ,
 
 	{PREC_NONE,NULL,NULL},// TOY_TOKEN_OPERATOR_DOT, // .
 	{PREC_CALL,NULL,binary},// TOY_TOKEN_OPERATOR_CONCAT, // ..
@@ -557,6 +558,26 @@ static Toy_AstFlag group(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast*
 	return TOY_AST_FLAG_NONE;
 }
 
+static Toy_AstFlag compound(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_Ast** rootHandle) {
+	//infix must advance
+	advance(parser);
+
+	if (parser->previous.type == TOY_TOKEN_OPERATOR_COMMA) {
+		parsePrecedence(bucketHandle, parser, rootHandle, PREC_ASSIGNMENT + 1);
+		return TOY_AST_FLAG_COMPOUND_COLLECTION;
+	}
+	else if (parser->previous.type == TOY_TOKEN_OPERATOR_BRACKET_LEFT) {
+		parsePrecedence(bucketHandle, parser, rootHandle, PREC_ASSIGNMENT + 1);
+		consume(parser, TOY_TOKEN_OPERATOR_BRACKET_RIGHT, "Expected ']' at the end of index expression");
+		return TOY_AST_FLAG_COMPOUND_INDEX;
+	}
+	else {
+		printError(parser, parser->previous, "Unexpected token passed to compound precedence rule");
+		Toy_private_emitAstError(bucketHandle, rootHandle);
+		return TOY_AST_FLAG_NONE;
+	}
+}
+
 static ParsingTuple* getParsingRule(Toy_TokenType type) {
 	return &parsingRulesetTable[type];
 }
@@ -605,12 +626,16 @@ static void parsePrecedence(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_A
 			(*rootHandle) = ptr;
 			return;
 		}
+		//eww, gross
 		else if (flag >= 10 && flag <= 19) {
 			Toy_String* name = Toy_createNameStringLength(bucketHandle, prevToken.lexeme, prevToken.length, TOY_VALUE_UNKNOWN, false);
 			Toy_private_emitAstVariableAssignment(bucketHandle, rootHandle, name, flag, ptr);
 		}
 		else if (flag >= 20 && flag <= 29) {
 			Toy_private_emitAstCompare(bucketHandle, rootHandle, flag, ptr);
+		}
+		else if (flag >= 30 && flag <= 39) {
+			Toy_private_emitAstCompound(bucketHandle, rootHandle, flag, ptr);
 		}
 		else {
 			Toy_private_emitAstBinary(bucketHandle, rootHandle, flag, ptr);

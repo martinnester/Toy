@@ -13,6 +13,11 @@ print "Hello" .. "world!";
 //print with escaped characters
 print "\tHello\nworld";
 
+//print from a leaf string
+print "Hello world"[0,5];
+
+print ("hello" .. "world")[2,6];
+
 //TODO: in the repl, -s to supress output, or -d to print debugging info
 
 //TODO: the `assert` keyword will be useful for these

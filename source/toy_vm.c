@@ -420,6 +420,74 @@ static void processConcat(Toy_VM* vm) {
 	Toy_pushStack(&vm->stack, TOY_VALUE_FROM_STRING(result));
 }
 
+static void processIndex(Toy_VM* vm) {
+	unsigned char count = READ_BYTE(vm); //value[index, length] ; 1[2, 3]
+
+	Toy_Value value = TOY_VALUE_FROM_NULL();
+	Toy_Value index = TOY_VALUE_FROM_NULL();
+	Toy_Value length = TOY_VALUE_FROM_NULL();
+
+	if (count == 3) {
+		length = Toy_popStack(&vm->stack);
+		index = Toy_popStack(&vm->stack);
+		value = Toy_popStack(&vm->stack);
+	}
+	else if (count == 2) {
+		index = Toy_popStack(&vm->stack);
+		value = Toy_popStack(&vm->stack);
+	}
+	else {
+		Toy_error("Incorrect number of elements found in index");
+		//TODO: clear stack
+		return;
+	}
+
+	//process based on value's type
+	if (TOY_VALUE_IS_STRING(value)) {
+		//type checks
+		if (!TOY_VALUE_IS_INTEGER(index)) {
+			Toy_error("Failed to index a string");
+			return;
+		}
+
+		if (!(TOY_VALUE_IS_NULL(length) || TOY_VALUE_IS_INTEGER(length))) {
+			Toy_error("Failed to index-length a string");
+			return;
+		}
+
+		//extract values
+		int i = TOY_VALUE_AS_INTEGER(index);
+		int l = TOY_VALUE_IS_INTEGER(length) ? TOY_VALUE_AS_INTEGER(length) : 1;
+
+		//extract string
+		Toy_String* str = TOY_VALUE_AS_STRING(value);
+		Toy_String* result = NULL;
+
+		//extract cstring, based on type
+		if (str->type == TOY_STRING_LEAF) {
+			const char* cstr = str->as.leaf.data;
+			result = Toy_createStringLength(&vm->stringBucket, cstr + i, l);
+		}
+		else if (str->type == TOY_STRING_NODE) {
+			char* cstr = Toy_getStringRawBuffer(str);
+			result = Toy_createStringLength(&vm->stringBucket, cstr + i, l);
+			free(cstr);
+		}
+		else {
+			fprintf(stderr, TOY_CC_ERROR "ERROR: Unknown string type found in processIndex, exiting\n" TOY_CC_RESET);
+			exit(-1);
+		}
+
+		//finally
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_STRING(result));
+	}
+
+	else {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Unknown value type %d found in processIndex, exiting\n" TOY_CC_RESET, value.type);
+		exit(-1);
+	}
+}
+
 static void process(Toy_VM* vm) {
 	while(true) {
 		Toy_OpcodeType opcode = READ_BYTE(vm);
@@ -492,6 +560,10 @@ static void process(Toy_VM* vm) {
 
 			case TOY_OPCODE_CONCAT:
 				processConcat(vm);
+				break;
+
+			case TOY_OPCODE_INDEX:
+				processIndex(vm);
 				break;
 
 			case TOY_OPCODE_PASS:

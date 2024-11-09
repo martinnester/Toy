@@ -15,6 +15,7 @@ typedef enum Toy_AstType {
 	TOY_AST_BINARY,
 	TOY_AST_COMPARE,
 	TOY_AST_GROUP,
+	TOY_AST_COMPOUND,
 
 	TOY_AST_PRINT,
 
@@ -52,14 +53,17 @@ typedef enum Toy_AstFlag {
 	TOY_AST_FLAG_COMPARE_GREATER = 24,
 	TOY_AST_FLAG_COMPARE_GREATER_EQUAL = 25,
 
-	TOY_AST_FLAG_AND = 30,
-	TOY_AST_FLAG_OR = 31,
-	TOY_AST_FLAG_CONCAT = 32,
+	TOY_AST_FLAG_COMPOUND_COLLECTION = 30,
+	TOY_AST_FLAG_COMPOUND_INDEX = 31,
+
+	TOY_AST_FLAG_AND = 40,
+	TOY_AST_FLAG_OR = 41,
+	TOY_AST_FLAG_CONCAT = 42,
 
 	//unary flags
-	TOY_AST_FLAG_NEGATE = 33,
-	TOY_AST_FLAG_INCREMENT = 34,
-	TOY_AST_FLAG_DECREMENT = 35,
+	TOY_AST_FLAG_NEGATE = 43,
+	TOY_AST_FLAG_INCREMENT = 44,
+	TOY_AST_FLAG_DECREMENT = 45,
 
 	// TOY_AST_FLAG_TERNARY,
 } Toy_AstFlag;
@@ -105,6 +109,13 @@ typedef struct Toy_AstGroup {
 	Toy_Ast* child;
 } Toy_AstGroup;
 
+typedef struct Toy_AstCompound {
+	Toy_AstType type;
+	Toy_AstFlag flag;
+	Toy_Ast* left;
+	Toy_Ast* right;
+} Toy_AstCompound;
+
 typedef struct Toy_AstPrint {
 	Toy_AstType type;
 	Toy_Ast* child;
@@ -148,6 +159,7 @@ union Toy_Ast {                     //32 | 64 BITNESS
 	Toy_AstBinary binary;           //16 | 24
 	Toy_AstCompare compare;         //16 | 24
 	Toy_AstGroup group;             //8  | 16
+	Toy_AstCompound compound;       //16 | 24
 	Toy_AstPrint print;             //8  | 16
 	Toy_AstVarDeclare varDeclare;   //16 | 24
 	Toy_AstVarAssign varAssign;     //16 | 24
@@ -165,6 +177,7 @@ void Toy_private_emitAstUnary(Toy_Bucket** bucketHandle, Toy_Ast** astHandle, To
 void Toy_private_emitAstBinary(Toy_Bucket** bucketHandle, Toy_Ast** astHandle,Toy_AstFlag flag, Toy_Ast* right);
 void Toy_private_emitAstCompare(Toy_Bucket** bucketHandle, Toy_Ast** astHandle,Toy_AstFlag flag, Toy_Ast* right);
 void Toy_private_emitAstGroup(Toy_Bucket** bucketHandle, Toy_Ast** astHandle);
+void Toy_private_emitAstCompound(Toy_Bucket** bucketHandle, Toy_Ast** astHandle,Toy_AstFlag flag, Toy_Ast* right);
 
 void Toy_private_emitAstPrint(Toy_Bucket** bucketHandle, Toy_Ast** astHandle);
 
