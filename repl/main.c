@@ -461,7 +461,7 @@ static void debugScopePrint(Toy_Scope* scope, int depth) {
 
 //main file
 int main(int argc, const char* argv[]) {
-	Toy_setPrintCallback(noOpCallback);
+	Toy_setPrintCallback(printCallback);
 	Toy_setErrorCallback(errorAndExitCallback);
 	Toy_setAssertFailureCallback(errorAndExitCallback);
 
