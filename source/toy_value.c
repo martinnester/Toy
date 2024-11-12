@@ -299,3 +299,22 @@ void Toy_stringifyValue(Toy_Value value, Toy_callbackType callback) {
 			exit(-1);
 	}
 }
+
+const char* Toy_private_getValueTypeAsCString(Toy_ValueType type) {
+	switch (type) {
+		case TOY_VALUE_NULL: return "null";
+		case TOY_VALUE_BOOLEAN: return "bool";
+		case TOY_VALUE_INTEGER: return "int";
+		case TOY_VALUE_FLOAT: return "float";
+		case TOY_VALUE_STRING: return "string";
+		case TOY_VALUE_ARRAY: return "array";
+		case TOY_VALUE_TABLE: return "table";
+		case TOY_VALUE_FUNCTION: return "function";
+		case TOY_VALUE_OPAQUE: return "opaque";
+		case TOY_VALUE_TYPE: return "type";
+		case TOY_VALUE_ANY: return "any";
+		case TOY_VALUE_UNKNOWN: return "unknown";
+	}
+
+	return NULL;
+}

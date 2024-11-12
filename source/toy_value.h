@@ -18,7 +18,7 @@ typedef enum Toy_ValueType {
 	TOY_VALUE_OPAQUE,
 	TOY_VALUE_TYPE,
 	TOY_VALUE_ANY,
-	TOY_VALUE_UNKNOWN, //The correct value is unknown, but will be determined later
+	TOY_VALUE_UNKNOWN, //The correct type is unknown, but will be determined later
 } Toy_ValueType;
 
 //8 bytes in size
@@ -71,3 +71,6 @@ TOY_API int Toy_compareValues(Toy_Value left, Toy_Value right);
 
 //convert the value to a string, then forward it to a callback
 TOY_API void Toy_stringifyValue(Toy_Value value, Toy_callbackType callback);
+
+//for debugging
+TOY_API const char* Toy_private_getValueTypeAsCString(Toy_ValueType type);

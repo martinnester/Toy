@@ -213,22 +213,30 @@ static void processArithmetic(Toy_VM* vm, Toy_OpcodeType opcode) {
 
 	//check types
 	if ((!TOY_VALUE_IS_INTEGER(left) && !TOY_VALUE_IS_FLOAT(left)) || (!TOY_VALUE_IS_INTEGER(right) && !TOY_VALUE_IS_FLOAT(right))) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Invalid types %d and %d passed to processArithmetic, exiting\n" TOY_CC_RESET, left.type, right.type);
-		exit(-1);
+		char buffer[256];
+		snprintf(buffer, 256, "Invalid types '%s' and '%s' passed in arithmetic", Toy_private_getValueTypeAsCString(left.type), Toy_private_getValueTypeAsCString(right.type));
+		Toy_error(buffer);
+		Toy_freeValue(left);
+		Toy_freeValue(right);
+		return;
 	}
 
 	//check for divide by zero
 	if (opcode == TOY_OPCODE_DIVIDE || opcode == TOY_OPCODE_MODULO) {
 		if ((TOY_VALUE_IS_INTEGER(right) && TOY_VALUE_AS_INTEGER(right) == 0) || (TOY_VALUE_IS_FLOAT(right) && TOY_VALUE_AS_FLOAT(right) == 0)) {
-			fprintf(stderr, TOY_CC_ERROR "ERROR: Can't divide by zero, exiting\n" TOY_CC_RESET);
-			exit(-1);
+			Toy_error("Can't divide or modulo by zero");
+			Toy_freeValue(left);
+			Toy_freeValue(right);
+			return;
 		}
 	}
 
 	//check for modulo by a float
 	if (opcode == TOY_OPCODE_MODULO && TOY_VALUE_IS_FLOAT(right)) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't modulo by a float, exiting\n" TOY_CC_RESET); //TODO: swap these with Toy_error so the repl doens't exit
-		exit(-1);
+		Toy_error("Can't modulo by a float");
+		Toy_freeValue(left);
+		Toy_freeValue(right);
+		return;
 	}
 
 	//coerce ints into floats if needed
@@ -293,8 +301,12 @@ static void processComparison(Toy_VM* vm, Toy_OpcodeType opcode) {
 	}
 
 	if (Toy_checkValuesAreComparable(left, right) == false) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't compare value types %d and %d\n" TOY_CC_RESET, left.type, right.type); //TODO: typeToCString for error messages
-		exit(-1);
+		char buffer[256];
+		snprintf(buffer, 256, "Can't compare value types '%s' and '%s'", Toy_private_getValueTypeAsCString(left.type), Toy_private_getValueTypeAsCString(right.type));
+		Toy_error(buffer);
+		Toy_freeValue(left);
+		Toy_freeValue(right);
+		return;
 	}
 
 	//get the comparison
@@ -470,7 +482,7 @@ static void processIndex(Toy_VM* vm) {
 	}
 
 	else {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Unknown value type %d found in processIndex, exiting\n" TOY_CC_RESET, value.type);
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Unknown value type '%s' found in processIndex, exiting\n" TOY_CC_RESET, Toy_private_getValueTypeAsCString(value.type));
 		exit(-1);
 	}
 
@@ -481,6 +493,9 @@ static void processIndex(Toy_VM* vm) {
 
 static void process(Toy_VM* vm) {
 	while(true) {
+		//prep by aligning to the 4-byte word
+		fixAlignment(vm);
+
 		Toy_OpcodeType opcode = READ_BYTE(vm);
 
 		switch(opcode) {
@@ -567,9 +582,6 @@ static void process(Toy_VM* vm) {
 				fprintf(stderr, TOY_CC_ERROR "ERROR: Invalid opcode %d found, exiting\n" TOY_CC_RESET, opcode);
 				exit(-1);
 		}
-
-		//prepare for the next instruction
-		fixAlignment(vm);
 	}
 }
 

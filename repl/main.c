@@ -138,6 +138,7 @@ typedef struct CmdLine {
 	bool silentPrint;
 	bool silentAssert;
 	bool removeAssert;
+	bool verboseDebugPrint;
 } CmdLine;
 
 void usageCmdLine(int argc, const char* argv[]) {
@@ -155,6 +156,7 @@ void helpCmdLine(int argc, const char* argv[]) {
 	printf("      --silent-print\t\tSuppress output from the print keyword.\n");
 	printf("      --silent-assert\t\tSuppress output from the assert keyword.\n");
 	printf("      --remove-assert\t\tDo not include the assert statement in the bytecode.\n");
+	printf("  -d, --verbose\t\tPrint debugging information about Toy's internals.\n");
 }
 
 void versionCmdLine(int argc, const char* argv[]) {
@@ -192,7 +194,8 @@ CmdLine parseCmdLine(int argc, const char* argv[]) {
 		.infileLength = 0,
 		.silentPrint = false,
 		.silentAssert = false,
-		.removeAssert = false
+		.removeAssert = false,
+		.verboseDebugPrint = false,
 	};
 
 	for (int i = 1; i < argc; i++) {
@@ -242,6 +245,10 @@ CmdLine parseCmdLine(int argc, const char* argv[]) {
 			cmd.removeAssert = true;
 		}
 
+		else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--verbose")) {
+			cmd.verboseDebugPrint = true;
+		}
+
 		else {
 			cmd.error = true;
 		}
@@ -251,21 +258,11 @@ CmdLine parseCmdLine(int argc, const char* argv[]) {
 }
 
 //repl function
-int repl(const char* filepath, CmdLine cmd) {
+int repl(const char* filepath) {
 	//output options
-	if (cmd.silentPrint) {
-		Toy_setPrintCallback(noOpCallback);
-	}
-	else {
-		Toy_setPrintCallback(printCallback);
-	}
-
-	if (cmd.silentAssert) {
-		Toy_setAssertFailureCallback(silentExitCallback);
-	}
-	else {
-		Toy_setAssertFailureCallback(errorAndContinueCallback);
-	}
+	Toy_setPrintCallback(printCallback);
+	Toy_setErrorCallback(errorAndContinueCallback);
+	Toy_setAssertFailureCallback(errorAndContinueCallback);
 
 	//vars to use
 	char prompt[256];
@@ -304,7 +301,7 @@ int repl(const char* filepath, CmdLine cmd) {
 		Toy_bindLexer(&lexer, inputBuffer);
 		Toy_Parser parser;
 		Toy_bindParser(&parser, &lexer);
-		Toy_configureParser(&parser, cmd.removeAssert);
+		Toy_configureParser(&parser, false);
 		Toy_Ast* ast = Toy_scanParser(&bucket, &parser); //Ast is in the bucket, so it doesn't need to be freed
 
 		//parsing error, retry
@@ -336,11 +333,11 @@ int repl(const char* filepath, CmdLine cmd) {
 static void debugStackPrint(Toy_Stack* stack) {
 	//DEBUG: if there's anything on the stack, print it
 	if (stack->count > 0) {
-		printf("Stack Dump\n\ntype\tvalue\n");
+		printf("Stack Dump\n-------------------------\ntype\tvalue\n");
 		for (int i = 0; i < stack->count; i++) {
 			Toy_Value v = ((Toy_Value*)(stack + 1))[i];
 
-			printf("%d\t", v.type);
+			printf("%s\t", Toy_private_getValueTypeAsCString(v.type));
 
 			switch(v.type) {
 				case TOY_VALUE_NULL:
@@ -396,7 +393,7 @@ static void debugStackPrint(Toy_Stack* stack) {
 static void debugScopePrint(Toy_Scope* scope, int depth) {
 	//DEBUG: if there's anything in the scope, print it
 	if (scope->table->count > 0) {
-		printf("Scope %d Dump\n\ntype\tname\tvalue\n", depth);
+		printf("Scope %d Dump\n-------------------------\ntype\tname\tvalue\n", depth);
 		for (int i = 0; i < scope->table->capacity; i++) {
 			if ( (TOY_VALUE_IS_STRING(scope->table->data[i].key) && TOY_VALUE_AS_STRING(scope->table->data[i].key)->type == TOY_STRING_NAME) == false) {
 				continue;
@@ -405,7 +402,7 @@ static void debugScopePrint(Toy_Scope* scope, int depth) {
 			Toy_Value k = scope->table->data[i].key;
 			Toy_Value v = scope->table->data[i].value;
 
-			printf("%d\t%s\t", v.type, TOY_VALUE_AS_STRING(k)->as.name.data);
+			printf("%s\t%s\t", Toy_private_getValueTypeAsCString(v.type), TOY_VALUE_AS_STRING(k)->as.name.data);
 
 			switch(v.type) {
 				case TOY_VALUE_NULL:
@@ -540,8 +537,10 @@ int main(int argc, const char* argv[]) {
 		Toy_runVM(&vm);
 
 		//print the debug info
-		debugStackPrint(vm.stack);
-		debugScopePrint(vm.scope, 0);
+		if (cmd.verboseDebugPrint) {
+			debugStackPrint(vm.stack);
+			debugScopePrint(vm.scope, 0);
+		}
 
 		//cleanup
 		Toy_freeVM(&vm);
@@ -549,7 +548,7 @@ int main(int argc, const char* argv[]) {
 		free(source);
 	}
 	else {
-		repl(argv[0], cmd);
+		repl(argv[0]);
 	}
 
 	return 0;
