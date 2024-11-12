@@ -272,8 +272,6 @@ void Toy_stringifyValue(Toy_Value value, Toy_callbackType callback) {
 
 		case TOY_VALUE_STRING: {
 			Toy_String* str = TOY_VALUE_AS_STRING(value);
-
-			//TODO: decide on how long strings, etc. live for in memory
 			if (str->type == TOY_STRING_NODE) {
 				char* buffer = Toy_getStringRawBuffer(str);
 				callback(buffer);

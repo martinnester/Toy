@@ -27,8 +27,8 @@ repl: source
 .PHONY: tests
 tests: clean test-cases test-integrations
 
-.PHONY: test-all
-test-all: clean test-cases test-integrations
+#.PHONY: test-all
+#test-all: clean test-cases test-integrations
 
 .PHONY: test-cases
 test-cases:
@@ -39,8 +39,8 @@ test-integrations:
 	$(MAKE) -C $(TOY_INTEGRATIONSDIR) -k
 
 #same as above, but with GDB
-.PHONY: test-gdb
-test-gdb: clean test-cases-gdb test-integrations-gdb
+.PHONY: tests-gdb
+tests-gdb: clean test-cases-gdb test-integrations-gdb
 
 .PHONY: test-cases-gdb
 test-cases-gdb:

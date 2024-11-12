@@ -33,7 +33,7 @@ all: source repl run
 run: $(TEST_SCRIPTFILES:.toy=.toy-run)
 
 %.toy-run: %.toy
-	$(TEST_OUTDIR)/$(TEST_REPLNAME) -f ../$<
+	$(TEST_OUTDIR)/$(TEST_REPLNAME) -f ../$< --verbose
 
 #same as above, but with gdb
 gdb: source repl run-gdb
@@ -41,7 +41,7 @@ gdb: source repl run-gdb
 run-gdb: $(TEST_SCRIPTFILES:.toy=.toy-gdb)
 
 %.toy-gdb: %.toy
-	gdb $(TEST_OUTDIR)/$(TEST_REPLNAME) -ix gdb_init -ex=run --batch --return-child-result --args "$(TEST_OUTDIR)/$(TEST_REPLNAME)" "-f" "../$<"
+	gdb $(TEST_OUTDIR)/$(TEST_REPLNAME) -ix gdb_init -ex=run --batch --return-child-result --args "$(TEST_OUTDIR)/$(TEST_REPLNAME)" "-f" "../$<" "--verbose"
 
 #compile the source and repl first
 source: $(TEST_OBJDIR) $(TEST_OUTDIR)

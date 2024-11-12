@@ -455,6 +455,11 @@ int test_binary(Toy_Bucket** bucketHandle) {
 	return 0;
 }
 
+int test_compound(Toy_Bucket** bucketHandle) {
+	//TODO: fix test_compound()
+	return 0;
+}
+
 int test_precedence(Toy_Bucket** bucketHandle) {
 	//test term-factor precedence
 	{
@@ -624,8 +629,6 @@ int main() {
 		total += res;
 	}
 
-	//TODO: assign & compare?
-
 	{
 		Toy_Bucket* bucket = Toy_allocateBucket(TOY_BUCKET_IDEAL);
 		res = test_values(&bucket);
@@ -649,6 +652,16 @@ int main() {
 	{
 		Toy_Bucket* bucket = Toy_allocateBucket(TOY_BUCKET_IDEAL);
 		res = test_binary(&bucket);
+		Toy_freeBucket(&bucket);
+		if (res == 0) {
+			printf(TOY_CC_NOTICE "All good\n" TOY_CC_RESET);
+		}
+		total += res;
+	}
+
+	{
+		Toy_Bucket* bucket = Toy_allocateBucket(TOY_BUCKET_IDEAL);
+		res = test_compound(&bucket);
 		Toy_freeBucket(&bucket);
 		if (res == 0) {
 			printf(TOY_CC_NOTICE "All good\n" TOY_CC_RESET);

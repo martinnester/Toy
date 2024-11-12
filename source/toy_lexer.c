@@ -23,7 +23,7 @@ const Toy_KeywordTypeTuple keywordTuples[] = {
 	{TOY_TOKEN_TYPE_STRING, "string"},
 	{TOY_TOKEN_TYPE_ARRAY, "array"},
 	{TOY_TOKEN_TYPE_TABLE, "table"},
-	{TOY_TOKEN_TYPE_FUNCTION, "function"}, //TODO: type??
+	{TOY_TOKEN_TYPE_FUNCTION, "function"},
 	{TOY_TOKEN_TYPE_OPAQUE, "opaque"},
 	{TOY_TOKEN_TYPE_ANY, "any"},
 

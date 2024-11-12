@@ -563,7 +563,7 @@ static Toy_AstFlag compound(Toy_Bucket** bucketHandle, Toy_Parser* parser, Toy_A
 	advance(parser);
 
 	if (parser->previous.type == TOY_TOKEN_OPERATOR_COMMA) {
-		parsePrecedence(bucketHandle, parser, rootHandle, PREC_GROUP);
+		parsePrecedence(bucketHandle, parser, rootHandle, PREC_GROUP); //NOT +1, as compounds are right-recursive
 		return TOY_AST_FLAG_COMPOUND_COLLECTION;
 	}
 	else if (parser->previous.type == TOY_TOKEN_OPERATOR_BRACKET_LEFT) {

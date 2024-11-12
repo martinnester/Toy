@@ -26,8 +26,8 @@ This repository holds the reference implementation for Toy version 2.x, written 
 //print is a built-in keyword, that can handle complex expressions
 print 6 * 7;
 
-//strings can be concatenated with the .. operator
-print "Hello" .. "world!";
+//strings can be concatenated with the .. operator, and substringed with the [] operator
+print "Hello" .. "world!"[3, 3]; //[index, length] - this prints "low"
 
 //variables are declared easily
 var foobar = 42;
@@ -40,7 +40,10 @@ var foobar = 42;
 //the types default to 'any' but can be specified if needed (same with constants)
 var immutable: string const = "Foobar";
 
-//more examples to be added as the features are implemented
+//the assert keyword can check an expression, and takes an optional second parameter
+assert immutable == "Fizzbuzz", "This message is sent to the terminal by default";
+
+//NOTE: This section will be expanded as more features are implemented
 ```
 
 # Building

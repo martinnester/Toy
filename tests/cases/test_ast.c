@@ -185,7 +185,71 @@ int test_type_emission(Toy_Bucket** bucketHandle) {
 		}
 	}
 
-	//emit print keyword
+	//emit compound
+	{
+		//build the AST
+		Toy_Ast* ast = NULL;
+		Toy_Ast* right = NULL;
+		Toy_private_emitAstValue(bucketHandle, &ast, TOY_VALUE_FROM_INTEGER(42));
+		Toy_private_emitAstValue(bucketHandle, &right, TOY_VALUE_FROM_INTEGER(69));
+		Toy_private_emitAstCompound(bucketHandle, &ast, TOY_AST_FLAG_COMPOUND_COLLECTION, right);
+
+		//check if it worked
+		if (
+			ast == NULL ||
+			ast->type != TOY_AST_COMPOUND ||
+
+			ast->compound.left == NULL ||
+			ast->compound.left->type != TOY_AST_VALUE ||
+			TOY_VALUE_IS_INTEGER(ast->compound.left->value.value) != true ||
+			TOY_VALUE_AS_INTEGER(ast->compound.left->value.value) != 42 ||
+
+			ast->compound.right == NULL ||
+			ast->compound.right->type != TOY_AST_VALUE ||
+			TOY_VALUE_IS_INTEGER(ast->compound.right->value.value) != true ||
+			TOY_VALUE_AS_INTEGER(ast->compound.right->value.value) != 69 ||
+
+			false)
+		{
+			fprintf(stderr, TOY_CC_ERROR "ERROR: failed to emit a compound as 'Toy_Ast', state unknown\n" TOY_CC_RESET);
+			return -1;
+		}
+	}
+
+	//emit keyword assert
+	{
+		//build the AST
+		Toy_Ast* ast = NULL;
+		Toy_Ast* child = NULL;
+		Toy_Ast* msg = NULL;
+
+		Toy_private_emitAstValue(bucketHandle, &child, TOY_VALUE_FROM_INTEGER(42));
+		Toy_private_emitAstValue(bucketHandle, &msg, TOY_VALUE_FROM_INTEGER(69));
+
+		Toy_private_emitAstAssert(bucketHandle, &ast, child, msg);
+
+		//check if it worked
+		if (
+			ast == NULL ||
+			ast->type != TOY_AST_ASSERT ||
+			ast->assert.child == NULL ||
+			ast->assert.child->type != TOY_AST_VALUE ||
+			TOY_VALUE_IS_INTEGER(ast->assert.child->value.value) != true ||
+			TOY_VALUE_AS_INTEGER(ast->assert.child->value.value) != 42 ||
+
+			ast->assert.message == NULL ||
+			ast->assert.message->type != TOY_AST_VALUE ||
+			TOY_VALUE_IS_INTEGER(ast->assert.message->value.value) != true ||
+			TOY_VALUE_AS_INTEGER(ast->assert.message->value.value) != 69 ||
+
+			false)
+		{
+			fprintf(stderr, TOY_CC_ERROR "ERROR: failed to emit a keyword 'assert' as 'Toy_Ast', state unknown\n" TOY_CC_RESET);
+			return -1;
+		}
+	}
+
+	//emit keyword print
 	{
 		//build the AST
 		Toy_Ast* ast = NULL;
@@ -207,51 +271,8 @@ int test_type_emission(Toy_Bucket** bucketHandle) {
 			ast->print.child->binary.right->type != TOY_AST_VALUE ||
 			TOY_VALUE_AS_INTEGER(ast->print.child->binary.right->value.value) != 69)
 		{
-			fprintf(stderr, TOY_CC_ERROR "ERROR: failed to emit a print as 'Toy_Ast', state unknown\n" TOY_CC_RESET);
+			fprintf(stderr, TOY_CC_ERROR "ERROR: failed to emit a keyword 'print' as 'Toy_Ast', state unknown\n" TOY_CC_RESET);
 			return -1;
-		}
-	}
-
-	//emit and append blocks of code
-	{
-		//initialize the root block
-		Toy_Ast* block = NULL;
-		Toy_private_initAstBlock(bucketHandle, &block);
-
-		//loop over the ast emissions, appending each one as you go
-		for (int i = 0; i < 5; i++) {
-			//build the AST
-			Toy_Ast* ast = NULL;
-			Toy_Ast* right = NULL;
-			Toy_private_emitAstValue(bucketHandle, &ast, TOY_VALUE_FROM_INTEGER(42));
-			Toy_private_emitAstValue(bucketHandle, &right, TOY_VALUE_FROM_INTEGER(69));
-			Toy_private_emitAstBinary(bucketHandle, &ast, TOY_AST_FLAG_ADD, right);
-			Toy_private_emitAstGroup(bucketHandle, &ast);
-
-			Toy_private_appendAstBlock(bucketHandle, block, ast);
-		}
-
-		//check if it worked
-		Toy_Ast* iter = block;
-
-		while(iter != NULL) {
-			if (
-				iter->type != TOY_AST_BLOCK ||
-				iter->block.child == NULL ||
-				iter->block.child->type != TOY_AST_GROUP ||
-				iter->block.child->group.child == NULL ||
-				iter->block.child->group.child->type != TOY_AST_BINARY ||
-				iter->block.child->group.child->binary.flag != TOY_AST_FLAG_ADD ||
-				iter->block.child->group.child->binary.left->type != TOY_AST_VALUE ||
-				TOY_VALUE_AS_INTEGER(iter->block.child->group.child->binary.left->value.value) != 42 ||
-				iter->block.child->group.child->binary.right->type != TOY_AST_VALUE ||
-				TOY_VALUE_AS_INTEGER(iter->block.child->group.child->binary.right->value.value) != 69)
-			{
-				fprintf(stderr, TOY_CC_ERROR "ERROR: failed to emit a block as 'Toy_Ast', state unknown\n" TOY_CC_RESET);
-				return -1;
-			}
-
-			iter = iter->block.next;
 		}
 	}
 
@@ -331,6 +352,48 @@ int test_type_emission(Toy_Bucket** bucketHandle) {
 		}
 	}
 
+	//emit and append blocks of code (at the bottom of this test function, so everything else is checked first)
+	{
+		//initialize the root block
+		Toy_Ast* block = NULL;
+		Toy_private_initAstBlock(bucketHandle, &block);
+
+		//loop over the ast emissions, appending each one as you go
+		for (int i = 0; i < 5; i++) {
+			//build the AST
+			Toy_Ast* ast = NULL;
+			Toy_Ast* right = NULL;
+			Toy_private_emitAstValue(bucketHandle, &ast, TOY_VALUE_FROM_INTEGER(42));
+			Toy_private_emitAstValue(bucketHandle, &right, TOY_VALUE_FROM_INTEGER(69));
+			Toy_private_emitAstBinary(bucketHandle, &ast, TOY_AST_FLAG_ADD, right);
+			Toy_private_emitAstGroup(bucketHandle, &ast);
+
+			Toy_private_appendAstBlock(bucketHandle, block, ast);
+		}
+
+		//check if it worked
+		Toy_Ast* iter = block;
+
+		while(iter != NULL) {
+			if (
+				iter->type != TOY_AST_BLOCK ||
+				iter->block.child == NULL ||
+				iter->block.child->type != TOY_AST_GROUP ||
+				iter->block.child->group.child == NULL ||
+				iter->block.child->group.child->type != TOY_AST_BINARY ||
+				iter->block.child->group.child->binary.flag != TOY_AST_FLAG_ADD ||
+				iter->block.child->group.child->binary.left->type != TOY_AST_VALUE ||
+				TOY_VALUE_AS_INTEGER(iter->block.child->group.child->binary.left->value.value) != 42 ||
+				iter->block.child->group.child->binary.right->type != TOY_AST_VALUE ||
+				TOY_VALUE_AS_INTEGER(iter->block.child->group.child->binary.right->value.value) != 69)
+			{
+				fprintf(stderr, TOY_CC_ERROR "ERROR: failed to emit a block as 'Toy_Ast', state unknown\n" TOY_CC_RESET);
+				return -1;
+			}
+
+			iter = iter->block.next;
+		}
+	}
 
 	return 0;
 }
@@ -339,24 +402,23 @@ int main() {
 	//run each test set, returning the total errors given
 	int total = 0, res = 0;
 
-
+	{
 #if TOY_BITNESS == 64
-	res = test_sizeof_ast_64bit();
-	total += res;
-
-	if (res == 0) {
-		printf(TOY_CC_NOTICE "All good\n" TOY_CC_RESET);
-	}
+		res = test_sizeof_ast_64bit();
 #elif TOY_BITNESS == 32
-	res = test_sizeof_ast_32bit();
-	total += res;
-
-	if (res == 0) {
-		printf(TOY_CC_NOTICE "All good\n" TOY_CC_RESET);
-	}
+		res = test_sizeof_ast_32bit();
 #else
-	fprintf(stderr, TOY_CC_WARN "WARNING: Skipping test_sizeof_ast_*bit(); Can't determine the 'bitness' of this platform (seems to be %d)\n" TOY_CC_RESET, TOY_BITNESS);
+		res = -1;
+		fprintf(stderr, TOY_CC_WARN "WARNING: Skipping test_sizeof_ast_**bit(); Can't determine the 'bitness' of this platform (seems to be %d)\n" TOY_CC_RESET, TOY_BITNESS);
 #endif
+
+		if (res == 0) {
+			printf(TOY_CC_NOTICE "All good\n" TOY_CC_RESET);
+		}
+		else if (res > 0) {
+			total += res;
+		}
+	}
 
 	{
 		Toy_Bucket* bucketHandle = Toy_allocateBucket(TOY_BUCKET_IDEAL);

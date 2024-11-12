@@ -33,11 +33,10 @@ TOY_API Toy_Array* Toy_resizeArray(Toy_Array* array, unsigned int capacity);
 
 //one line to expand the array
 #ifndef TOY_ARRAY_EXPAND
-#define TOY_ARRAY_EXPAND(array) (array = (array != NULL && (array)->count + 1 > (array)->capacity ? Toy_resizeArray(array, (array)-> capacity * TOY_ARRAY_EXPANSION_RATE) : array))
+#define TOY_ARRAY_EXPAND(array) (array = (array != NULL && (array)->count + 1 > (array)->capacity ? Toy_resizeArray(array, (array)->capacity * TOY_ARRAY_EXPANSION_RATE) : array))
 #endif
 
 //quick push back
 #ifndef TOY_ARRAY_PUSHBACK
 #define TOY_ARRAY_PUSHBACK(array, value) (TOY_ARRAY_EXPAND(array),(array)->data[(array)->count++] = (value))
 #endif
-

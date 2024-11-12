@@ -2,8 +2,8 @@
 var answer = 42;
 print answer; //42
 {
-	    var answer = 7;
-		    print answer; //7
+	var answer = 7;
+	print answer; //7
 }
 print answer; //42
 
@@ -11,9 +11,7 @@ print answer; //42
 var question = 42;
 print question; //42
 {
-	    var question = question;
-		    print question; //42
+	var question = question;
+	print question; //42
 }
 print question; //42
-
-//TODO: scope test case

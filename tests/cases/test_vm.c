@@ -175,7 +175,136 @@ static void callbackUtil(const char* msg) {
 	}
 }
 
-int test_keywords(Toy_Bucket** bucketHandle) {
+int test_keyword_assert(Toy_Bucket** bucketHandle) {
+	//test assert true
+	{
+		//setup
+		Toy_setAssertFailureCallback(callbackUtil);
+		const char* source = "assert true;";
+
+		Toy_Lexer lexer;
+		Toy_bindLexer(&lexer, source);
+
+		Toy_Parser parser;
+		Toy_bindParser(&parser, &lexer);
+
+		Toy_Ast* ast = Toy_scanParser(bucketHandle, &parser);
+		Toy_Bytecode bc = Toy_compileBytecode(ast);
+
+		Toy_VM vm;
+		Toy_initVM(&vm);
+		Toy_bindVM(&vm, bc.ptr);
+
+		//run
+		Toy_runVM(&vm);
+
+		//check
+		if (callbackUtilReceived != NULL)
+		{
+			fprintf(stderr, TOY_CC_ERROR "ERROR: Unexpected assert message '%s' found, source: %s\n" TOY_CC_RESET, callbackUtilReceived != NULL ? callbackUtilReceived : "NULL", source);
+
+			//cleanup and return
+			Toy_resetAssertFailureCallback();
+			free(callbackUtilReceived);
+			Toy_freeVM(&vm);
+			return -1;
+		}
+
+		//teadown
+		Toy_resetAssertFailureCallback();
+		free(callbackUtilReceived);
+		callbackUtilReceived = NULL;
+		Toy_freeVM(&vm);
+	}
+
+	//test assert false
+	{
+		//setup
+		Toy_setAssertFailureCallback(callbackUtil);
+		const char* source = "assert false;";
+
+		Toy_Lexer lexer;
+		Toy_bindLexer(&lexer, source);
+
+		Toy_Parser parser;
+		Toy_bindParser(&parser, &lexer);
+
+		Toy_Ast* ast = Toy_scanParser(bucketHandle, &parser);
+		Toy_Bytecode bc = Toy_compileBytecode(ast);
+
+		Toy_VM vm;
+		Toy_initVM(&vm);
+		Toy_bindVM(&vm, bc.ptr);
+
+		//run
+		Toy_runVM(&vm);
+
+		//check
+		if (callbackUtilReceived == NULL ||
+			strcmp(callbackUtilReceived, "assertion failed") != 0)
+		{
+			fprintf(stderr, TOY_CC_ERROR "ERROR: Unexpected assert failure message '%s' found, source: %s\n" TOY_CC_RESET, callbackUtilReceived != NULL ? callbackUtilReceived : "NULL", source);
+
+			//cleanup and return
+			Toy_resetAssertFailureCallback();
+			free(callbackUtilReceived);
+			Toy_freeVM(&vm);
+			return -1;
+		}
+
+		//teadown
+		Toy_resetAssertFailureCallback();
+		free(callbackUtilReceived);
+		callbackUtilReceived = NULL;
+		Toy_freeVM(&vm);
+	}
+
+	//test assert false with message
+	{
+		//setup
+		Toy_setAssertFailureCallback(callbackUtil);
+		const char* source = "assert false, \"You passed a false to assert\";";
+
+		Toy_Lexer lexer;
+		Toy_bindLexer(&lexer, source);
+
+		Toy_Parser parser;
+		Toy_bindParser(&parser, &lexer);
+
+		Toy_Ast* ast = Toy_scanParser(bucketHandle, &parser);
+		Toy_Bytecode bc = Toy_compileBytecode(ast);
+
+		Toy_VM vm;
+		Toy_initVM(&vm);
+		Toy_bindVM(&vm, bc.ptr);
+
+		//run
+		Toy_runVM(&vm);
+
+		//check
+		if (callbackUtilReceived == NULL ||
+			strcmp(callbackUtilReceived, "You passed a false to assert") != 0)
+		{
+			fprintf(stderr, TOY_CC_ERROR "ERROR: Unexpected assert failure message '%s' found, source: %s\n" TOY_CC_RESET, callbackUtilReceived != NULL ? callbackUtilReceived : "NULL", source);
+
+			//cleanup and return
+			Toy_resetAssertFailureCallback();
+			free(callbackUtilReceived);
+			Toy_freeVM(&vm);
+			return -1;
+		}
+
+		//teadown
+		Toy_resetAssertFailureCallback();
+		free(callbackUtilReceived);
+		callbackUtilReceived = NULL;
+		Toy_freeVM(&vm);
+	}
+
+	return 0;
+}
+
+int test_keyword_print(Toy_Bucket** bucketHandle) {
 	//test print
 	{
 		//setup
@@ -198,7 +327,7 @@ int test_keywords(Toy_Bucket** bucketHandle) {
 		//run
 		Toy_runVM(&vm);
 
-		//check the final state of the stack
+		//check
 		if (callbackUtilReceived == NULL ||
 			strcmp(callbackUtilReceived, "42") != 0)
 		{
@@ -240,7 +369,7 @@ int test_keywords(Toy_Bucket** bucketHandle) {
 		//run
 		Toy_runVM(&vm);
 
-		//check the final state of the stack
+		//check
 		if (callbackUtilReceived == NULL ||
 			strcmp(callbackUtilReceived, "Hello world!") != 0)
 		{
@@ -282,7 +411,7 @@ int test_keywords(Toy_Bucket** bucketHandle) {
 		//run
 		Toy_runVM(&vm);
 
-		//check the final state of the stack
+		//check
 		if (callbackUtilReceived == NULL ||
 			strcmp(callbackUtilReceived, "Helloworld!") != 0)
 		{
@@ -329,7 +458,7 @@ int test_scope(Toy_Bucket** bucketHandle) {
 		//run
 		Toy_runVM(&vm);
 
-		//check the final state of the stack
+		//check
 		Toy_String* key = Toy_createNameStringLength(bucketHandle, "foobar", 6, TOY_VALUE_ANY, false);
 
 		if (vm.stack == NULL ||
@@ -376,7 +505,7 @@ int test_scope(Toy_Bucket** bucketHandle) {
 		//run
 		Toy_runVM(&vm);
 
-		//check the final state of the stack
+		//check
 		Toy_String* key = Toy_createNameStringLength(bucketHandle, "foobar", 6, TOY_VALUE_UNKNOWN, false);
 
 		if (vm.stack == NULL ||
@@ -512,7 +641,17 @@ int main() {
 
 	{
 		Toy_Bucket* bucket = Toy_allocateBucket(TOY_BUCKET_IDEAL);
-		res = test_keywords(&bucket);
+		res = test_keyword_print(&bucket);
+		Toy_freeBucket(&bucket);
+		if (res == 0) {
+			printf(TOY_CC_NOTICE "All good\n" TOY_CC_RESET);
+		}
+		total += res;
+	}
+
+	{
+		Toy_Bucket* bucket = Toy_allocateBucket(TOY_BUCKET_IDEAL);
+		res = test_keyword_assert(&bucket);
 		Toy_freeBucket(&bucket);
 		if (res == 0) {
 			printf(TOY_CC_NOTICE "All good\n" TOY_CC_RESET);

@@ -189,7 +189,7 @@ static void processAccess(Toy_VM* vm) {
 
 	//find and push the value
 	Toy_Value value = Toy_accessScope(vm->scope, TOY_VALUE_AS_STRING(name));
-	Toy_pushStack(&vm->stack, value);
+	Toy_pushStack(&vm->stack, Toy_copyValue(value));
 
 	//cleanup
 	Toy_freeValue(name);

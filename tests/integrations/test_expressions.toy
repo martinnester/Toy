@@ -1,3 +1,0 @@
-//basic expressions with no side effects (other than debug stack dumps)
-(1 + 2) * (3 + 4);
-

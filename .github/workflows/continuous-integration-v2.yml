@@ -60,5 +60,3 @@ jobs:
       - name: run the tests
         if: (matrix.commands.gdb == true && matrix.platforms.gdb_enabled == false) != true
         run: ${{ matrix.commands.exec }}
-
-

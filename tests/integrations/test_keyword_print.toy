@@ -13,7 +13,9 @@ print "Hello" .. "world!";
 //print with escaped characters
 print "\tHello\nworld";
 
-//print from a leaf string
+//print from a substring string
 print "Hello world"[0,5];
 
+//print from a substring, after a concat
 print ("hello" .. "world")[2,6];
+

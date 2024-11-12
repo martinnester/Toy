@@ -49,4 +49,4 @@ TOY_API void Toy_freeVM(Toy_VM* vm);
 
 TOY_API void Toy_resetVM(Toy_VM* vm); //prepares for another run without deleting stack, scope and memory
 
-//TODO: inject extra data
+//TODO: inject extra data (hook system for external libraries)
