@@ -1,6 +1,6 @@
 # Embedding Toy
 
-This tutorial assumes that you've managed to embed Toy into your program by following the tutorial [Building Toy](deep-dive/building-toy).
+This tutorial assumes that you've managed to embed Toy into your program by following the tutorial [Building Toy](building-toy).
 
 Here, we'll look at some ways in which you can utilize Toy's C API within your host program.
 
@@ -18,7 +18,7 @@ The functions intended for usage by the API are prepended with the C macro `TOY_
 
 ## Structures Used Throughout Toy
 
-The main unit of data within Toy's internals is `Toy_Literal`, which can contain any value that can exist within the Toy langauge - even identifiers. The exact implementation of `Toy_Literal` may change or evolve as time goes on, so it's recommended that you only interact with literals directly by using the macros and functions outlined [above](#embedded-api-macros). See the [types](getting-started/types) page for information on exactly what datatypes exist in Toy.
+The main unit of data within Toy's internals is `Toy_Literal`, which can contain any value that can exist within the Toy langauge - even identifiers. The exact implementation of `Toy_Literal` may change or evolve as time goes on, so it's recommended that you only interact with literals directly by using the macros and functions outlined [above](#embedded-api-macros). See the [types](../getting-started/types) page for information on exactly what datatypes exist in Toy.
 
 There are two main "compound structures" used within Toy's internals - the `Toy_LiteralArray` and `Toy_LiteralDictionary`. The former is an array of `Toy_Literal` instances stored sequentially in memory for fast lookups, while the latter is a key-value hashmap designed for efficient lookups based on a `Toy_Literal` key. These are both accessible via the language as well.
 
@@ -26,7 +26,7 @@ These compound structures hold **copies** of literals given to them, rather than
 
 ## Compiling Toy Scripts
 
-Please see [Compiling Toy](deep-dive/compiling-toy) for more information on the process of turning scripts into bytecode.
+Please see [Compiling Toy](compiling-toy) for more information on the process of turning scripts into bytecode.
 
 ## Interpreting Toy
 
